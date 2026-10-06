@@ -1,0 +1,6 @@
+{
+  "Name": "Lyrebird_10_DP",
+  "ProjectType": "Process",
+  "Description": "Reads new wishlist items from Supabase or Excel, validates artist and album against MusicBrainz, and adds valid items to the Lyrebird_Wishlist queue. Writes the status back to the source.",
+  "MainFile": "Main.xaml"
+}
