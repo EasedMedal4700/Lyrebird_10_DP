@@ -1,0 +1,158 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Tests_LoadNewWishlistItemsIntegrationTestCase" this:Tests_LoadNewWishlistItemsIntegrationTestCase.in_QueueName="Lyrebird_Validate_IT" this:Tests_LoadNewWishlistItemsIntegrationTestCase.in_QueueFolder="Lyrebird" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uta="clr-namespace:UiPath.Testing.Activities;assembly=UiPath.Testing.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Dedicated TEST queue (never Lyrebird_Validate). Must exist with 'Enforce unique references' = Yes and no trigger/robot consuming it." Name="in_QueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the test queue." Name="in_QueueFolder" Type="InArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Testing</x:String>
+      <x:String>UiPath.Testing.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Testing</AssemblyReference>
+      <AssemblyReference>UiPath.Testing.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="CONTROLLED INTEGRATION TEST - writes to Orchestrator. Run manually, only after the setup in Documentation/Lyrebird_DataContract.md section 7.&#xA;Uses a synthetic row (Supabase is not read or written) and a dedicated test queue; refuses to run against Lyrebird_Validate.&#xA;1) live load adds the item; 2) loading the same reference again must be counted as already queued (confirmed 409 'Duplicate Reference'), not added; 3) a missing queue must surface as an error, not be absorbed as a duplicate.&#xA;Each run creates one New item in the test queue (unique id from the UTC time); nothing consumes that queue." DisplayName="LoadNewWishlistItemsIntegrationTestCase" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:Int64" Name="SyntheticId" />
+      <Variable x:TypeArguments="x:String" Name="ExpectedReference" />
+      <Variable x:TypeArguments="njl:JArray" Name="Rows" />
+      <Variable x:TypeArguments="x:Int32" Name="FirstAdded" />
+      <Variable x:TypeArguments="x:Int32" Name="FirstAlreadyQueued" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="FirstAddedReferences" />
+      <Variable x:TypeArguments="x:Int32" Name="SecondAdded" />
+      <Variable x:TypeArguments="x:Int32" Name="SecondAlreadyQueued" />
+      <Variable x:TypeArguments="x:String" Name="MissingQueueErrorType" />
+      <Variable x:TypeArguments="x:String" Name="MissingQueueErrorMessage" />
+      <Variable x:TypeArguments="x:Int32" Name="DiscardInt" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="DiscardList" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="... Given" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <If Condition="[String.IsNullOrWhiteSpace(in_QueueName) OrElse in_QueueName.Trim().Equals(&quot;Lyrebird_Validate&quot;, StringComparison.OrdinalIgnoreCase)]" DisplayName="If queue is not a test queue" sap2010:WorkflowViewState.IdRef="If_1">
+        <If.Then>
+          <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_3">
+            <Throw DisplayName="Throw refuse production queue" Exception="[New InvalidOperationException(&quot;Integration test refuses to write to the production queue Lyrebird_Validate (or an empty queue name). Use a dedicated test queue such as Lyrebird_Validate_IT.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+          </Sequence>
+        </If.Then>
+      </If>
+      <Assign x:TypeArguments="x:Int64" sap2010:Annotation.AnnotationText="12-digit id from the UTC time, so every run uses a new Reference in the test queue." DisplayName="Assign SyntheticId" sap2010:WorkflowViewState.IdRef="Assign_1" To="[SyntheticId]" Value="[CLng(DateTime.UtcNow.ToString(&quot;yyMMddHHmmss&quot;))]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ExpectedReference" sap2010:WorkflowViewState.IdRef="Assign_2" To="[ExpectedReference]" Value="[$&quot;WL-{SyntheticId}-S1&quot;]" />
+      <Assign x:TypeArguments="njl:JArray" DisplayName="Assign Rows" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Rows]" Value="[New JArray(New JObject(New JProperty(&quot;id&quot;, SyntheticId), New JProperty(&quot;artist&quot;, &quot;Lyrebird Integration Test&quot;), New JProperty(&quot;album&quot;, $&quot;Synthetic {SyntheticId}&quot;), New JProperty(&quot;preferred_format&quot;, &quot;FLAC&quot;)))]" />
+      <ui:LogMessage DisplayName="Log test setup" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Integration test: queue '{in_QueueName}' in folder '{in_QueueFolder}', synthetic reference {ExpectedReference}.&quot;]" />
+    </Sequence>
+    <Sequence DisplayName="... When" sap2010:WorkflowViewState.IdRef="Sequence_4">
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke loader - first load (live)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Wishlist\LoadNewWishlistItems.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_QueueName]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[String.Empty]</InArgument>
+          <InArgument x:TypeArguments="njl:JArray" x:Key="in_Rows">[Rows]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[FirstAdded]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_WouldAddCount">[DiscardInt]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[FirstAlreadyQueued]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_DuplicateInBatchCount">[DiscardInt]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_InvalidCount">[DiscardInt]</OutArgument>
+          <OutArgument x:TypeArguments="scg:List(x:String)" x:Key="out_AddedReferences">[FirstAddedReferences]</OutArgument>
+          <OutArgument x:TypeArguments="scg:List(x:String)" x:Key="out_WouldAddReferences">[DiscardList]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke loader - same reference again (live)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Wishlist\LoadNewWishlistItems.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_QueueName]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[String.Empty]</InArgument>
+          <InArgument x:TypeArguments="njl:JArray" x:Key="in_Rows">[Rows]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[SecondAdded]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_WouldAddCount">[DiscardInt]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[SecondAlreadyQueued]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_DuplicateInBatchCount">[DiscardInt]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_InvalidCount">[DiscardInt]</OutArgument>
+          <OutArgument x:TypeArguments="scg:List(x:String)" x:Key="out_AddedReferences">[DiscardList]</OutArgument>
+          <OutArgument x:TypeArguments="scg:List(x:String)" x:Key="out_WouldAddReferences">[DiscardList]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <TryCatch DisplayName="Try load into a missing queue" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+        <TryCatch.Try>
+          <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_5">
+            <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke loader - missing queue (live)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_3" UnSafe="False" WorkflowFileName="Workflows\Wishlist\LoadNewWishlistItems.xaml">
+              <ui:InvokeWorkflowFile.Arguments>
+                <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[$"Lyrebird_IT_Missing_{SyntheticId}"]</InArgument>
+                <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+                <InArgument x:TypeArguments="x:String" x:Key="in_Query">[String.Empty]</InArgument>
+                <InArgument x:TypeArguments="njl:JArray" x:Key="in_Rows">[Rows]</InArgument>
+                <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+                <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[DiscardInt]</OutArgument>
+                <OutArgument x:TypeArguments="x:Int32" x:Key="out_WouldAddCount">[DiscardInt]</OutArgument>
+                <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[DiscardInt]</OutArgument>
+                <OutArgument x:TypeArguments="x:Int32" x:Key="out_DuplicateInBatchCount">[DiscardInt]</OutArgument>
+                <OutArgument x:TypeArguments="x:Int32" x:Key="out_InvalidCount">[DiscardInt]</OutArgument>
+                <OutArgument x:TypeArguments="scg:List(x:String)" x:Key="out_AddedReferences">[DiscardList]</OutArgument>
+                <OutArgument x:TypeArguments="scg:List(x:String)" x:Key="out_WouldAddReferences">[DiscardList]</OutArgument>
+              </ui:InvokeWorkflowFile.Arguments>
+            </ui:InvokeWorkflowFile>
+          </Sequence>
+        </TryCatch.Try>
+        <TryCatch.Catches>
+          <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+            <ActivityAction x:TypeArguments="s:Exception">
+              <ActivityAction.Argument>
+                <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+              </ActivityAction.Argument>
+              <Sequence DisplayName="Catch" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                <Assign x:TypeArguments="x:String" DisplayName="Assign MissingQueueErrorType" sap2010:WorkflowViewState.IdRef="Assign_4" To="[MissingQueueErrorType]" Value="[exception.GetType().Name]" />
+                <Assign x:TypeArguments="x:String" DisplayName="Assign MissingQueueErrorMessage" sap2010:WorkflowViewState.IdRef="Assign_5" To="[MissingQueueErrorMessage]" Value="[exception.Message]" />
+              </Sequence>
+            </ActivityAction>
+          </Catch>
+        </TryCatch.Catches>
+      </TryCatch>
+    </Sequence>
+    <Sequence DisplayName="... Then" sap2010:WorkflowViewState.IdRef="Sequence_7">
+      <ui:LogMessage DisplayName="Log results" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;Integration test: first load added {FirstAdded} ({String.Join(&quot;, &quot;, FirstAddedReferences)}), already queued {FirstAlreadyQueued}; second load added {SecondAdded}, already queued {SecondAlreadyQueued}; missing queue error: {If(MissingQueueErrorType, &quot;NONE&quot;)}: {MissingQueueErrorMessage}&quot;]" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="True" DisplayName="Verify first load added the item" Expression="[FirstAdded = 1 AndAlso FirstAlreadyQueued = 0 AndAlso FirstAddedReferences.SequenceEqual({ExpectedReference})]" sap2010:WorkflowViewState.IdRef="VerifyExpression_1" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="True" DisplayName="Verify same reference was rejected as already queued" Expression="[SecondAdded = 0 AndAlso SecondAlreadyQueued = 1]" sap2010:WorkflowViewState.IdRef="VerifyExpression_2" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="True" DisplayName="Verify missing queue error stayed visible" Expression="[MissingQueueErrorType = &quot;OrchestratorHttpException&quot;]" sap2010:WorkflowViewState.IdRef="VerifyExpression_3" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+    </Sequence>
+  </Sequence>
+</Activity>

@@ -35,8 +35,10 @@ through `Workflows/Supabase/GetConnection.xaml`, `GetRows.xaml` and `UpdateRows.
 When you need the database structure (tables, columns, allowed status values, constraints), use either source:
 
 - **Supabase itself**: the live database is the source of truth. Query it, for example by running `GetRows.xaml`.
-- **The `DB` folder** next to this project (`../DB`, i.e. `C:\Users\fquaa\Documents\UiPath\Lyrebird\DB`):
-  one `<table>.sql` file per table with its `create table` statement (for example `DB/wishlist.sql`).
+- **The shared `DB` folder** `../Lyrebird_00_Shared/DB` (relative to this project folder; it is part of the
+  `Lyrebird` parent repository, not of this project's repository): one `<table>.sql` file per table with its
+  `create table` statement (for example `../Lyrebird_00_Shared/DB/wishlist.sql`).
+  Don't use absolute paths: the user folder differs per machine.
 
 If the `DB` folder doesn't exist, a table is missing from it, or its contents don't match what Supabase returns,
 **tell the user** which table is missing or what differs. Don't silently work around it.

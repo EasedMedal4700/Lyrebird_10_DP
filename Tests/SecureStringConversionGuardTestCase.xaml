@@ -1,0 +1,74 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Tests_SecureStringConversionGuardTestCase" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uta="clr-namespace:UiPath.Testing.Activities;assembly=UiPath.Testing.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.IO</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Testing</x:String>
+      <x:String>UiPath.Testing.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Testing</AssemblyReference>
+      <AssemblyReference>UiPath.Testing.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Compensating control for the ST-SEC-009 exception: the analyzer exclusion works per activity TYPE (all HTTP Request activities), so this offline test makes sure the SecureString-to-String conversion stays limited to the two accepted places: Workflows\Supabase\GetRows.xaml and Workflows\Supabase\UpdateRows.xaml.&#xA;Scans every .xaml in the project (dot folders and this file excluded) for the usual conversion patterns." DisplayName="SecureStringConversionGuardTestCase" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="ProjectRoot" />
+      <Variable x:TypeArguments="x:String" Name="ConversionPattern" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="AllowedFiles" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="ScannedFiles" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="FilesWithConversion" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="... Given" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="Jobs and uip rpa run start in the project folder." DisplayName="Assign ProjectRoot" sap2010:WorkflowViewState.IdRef="Assign_1" To="[ProjectRoot]" Value="[Environment.CurrentDirectory]" />
+      <Assign x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="Built from parts so this file never matches itself." DisplayName="Assign ConversionPattern" sap2010:WorkflowViewState.IdRef="Assign_2" To="[ConversionPattern]" Value="[String.Join(&quot;|&quot;, {&quot;Network&quot; &amp; &quot;Credential\s*\(&quot;, &quot;SecureString&quot; &amp; &quot;ToBSTR&quot;, &quot;SecureString&quot; &amp; &quot;ToGlobalAlloc&quot;, &quot;PtrTo&quot; &amp; &quot;String&quot;, &quot;ToUnsecure&quot; &amp; &quot;String&quot;, &quot;ConvertFrom-&quot; &amp; &quot;SecureString&quot;})]" />
+      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign AllowedFiles" sap2010:WorkflowViewState.IdRef="Assign_3" To="[AllowedFiles]" Value="[New List(Of String) From {&quot;Workflows\Supabase\GetRows.xaml&quot;, &quot;Workflows\Supabase\UpdateRows.xaml&quot;}]" />
+    </Sequence>
+    <Sequence DisplayName="... When" sap2010:WorkflowViewState.IdRef="Sequence_3">
+      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign ScannedFiles" sap2010:WorkflowViewState.IdRef="Assign_4" To="[ScannedFiles]" Value="[Directory.GetFiles(ProjectRoot, &quot;*.xaml&quot;, SearchOption.AllDirectories).Select(Function(f) Path.GetRelativePath(ProjectRoot, f)).Where(Function(r) Not r.Split(Path.DirectorySeparatorChar).Any(Function(part) part.StartsWith(&quot;.&quot;)) AndAlso Not r.Equals(&quot;Tests\SecureStringConversionGuardTestCase.xaml&quot;, StringComparison.OrdinalIgnoreCase)).OrderBy(Function(r) r).ToList()]" />
+      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign FilesWithConversion" sap2010:WorkflowViewState.IdRef="Assign_5" To="[FilesWithConversion]" Value="[ScannedFiles.Where(Function(r) Regex.IsMatch(File.ReadAllText(Path.Combine(ProjectRoot, r)), ConversionPattern)).ToList()]" />
+    </Sequence>
+    <Sequence DisplayName="... Then" sap2010:WorkflowViewState.IdRef="Sequence_4">
+      <ui:LogMessage DisplayName="Log results" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;SecureString guard: scanned {ScannedFiles.Count} workflow(s) under '{ProjectRoot}'; conversion found in: {If(FilesWithConversion.Count = 0, &quot;none&quot;, String.Join(&quot;, &quot;, FilesWithConversion))}&quot;]" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify the project folder was scanned" Expression="[File.Exists(Path.Combine(ProjectRoot, &quot;project.json&quot;)) AndAlso ScannedFiles.Contains(&quot;Main.xaml&quot;)]" sap2010:WorkflowViewState.IdRef="VerifyExpression_1" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify conversions only in the accepted workflows" Expression="[FilesWithConversion.All(Function(r) AllowedFiles.Contains(r, StringComparer.OrdinalIgnoreCase))]" sap2010:WorkflowViewState.IdRef="VerifyExpression_2" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+    </Sequence>
+  </Sequence>
+</Activity>

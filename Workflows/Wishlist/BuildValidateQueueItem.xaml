@@ -1,0 +1,92 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_BuildValidateQueueItem" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="One wishlist row as returned by Supabase GetRows (JSON object with at least id, artist, album, preferred_format; submission is optional and defaults to 1)." Name="in_Row" Type="InArgument(njl:JToken)" />
+    <x:Property sap2010:Annotation.AnnotationText="Queue item Reference: WL-&lt;id&gt;-S&lt;submission&gt;, e.g. WL-42-S1. Empty when the row is invalid." Name="out_Reference" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Specific content for the Lyrebird_Validate queue item: PayloadVersion, WishlistId, Artist, Album, PreferredFormat, Submission. Empty when the row is invalid." Name="out_ItemInformation" Type="OutArgument(scg:Dictionary(x:String, x:Object))" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has everything the Lyrebird_Validate payload needs." Name="out_IsValid" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="Why the row is invalid (several reasons separated by '; '). Empty when valid." Name="out_InvalidReason" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Turns one wishlist row into the Reference and specific content of a Lyrebird_Validate queue item.&#xA;No side effects (no Supabase, no Orchestrator), so it can be tested offline.&#xA;The Reference only uses id + submission, so a spelling fix in the wishlist does not create a second queue item for the same row." DisplayName="Build Validate Queue Item" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="njl:JObject" Name="Row" />
+      <Variable x:TypeArguments="x:String" Name="IdText" />
+      <Variable x:TypeArguments="x:Int64" Name="WishlistId" />
+      <Variable x:TypeArguments="x:String" Name="Artist" />
+      <Variable x:TypeArguments="x:String" Name="Album" />
+      <Variable x:TypeArguments="x:String" Name="PreferredFormat" />
+      <Variable x:TypeArguments="x:String" Name="SubmissionText" />
+      <Variable x:TypeArguments="x:Int32" Name="Submission" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="Reset outputs" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsValid" sap2010:WorkflowViewState.IdRef="Assign_1" To="[out_IsValid]" Value="[False]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reference" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_Reference]" Value="[String.Empty]" />
+      <Assign x:TypeArguments="scg:Dictionary(x:String, x:Object)" DisplayName="Assign out_ItemInformation" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_ItemInformation]" Value="[New Dictionary(Of String, Object)()]" />
+    </Sequence>
+    <Sequence DisplayName="Read row fields" sap2010:WorkflowViewState.IdRef="Sequence_3">
+      <Assign x:TypeArguments="njl:JObject" sap2010:Annotation.AnnotationText="Anything that is not a JSON object becomes an empty object, so every field below reads as missing." DisplayName="Assign Row" sap2010:WorkflowViewState.IdRef="Assign_4" To="[Row]" Value="[If(TryCast(in_Row, JObject), New JObject())]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign IdText" sap2010:WorkflowViewState.IdRef="Assign_5" To="[IdText]" Value="[If(Row.Value(Of String)(&quot;id&quot;), String.Empty).Trim()]" />
+      <Assign x:TypeArguments="x:Int64" DisplayName="Assign WishlistId" sap2010:WorkflowViewState.IdRef="Assign_6" To="[WishlistId]" Value="[If(Regex.IsMatch(IdText, &quot;^[0-9]{1,18}$&quot;), CLng(IdText), 0L)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign Artist" sap2010:WorkflowViewState.IdRef="Assign_7" To="[Artist]" Value="[If(Row.Value(Of String)(&quot;artist&quot;), String.Empty).Trim()]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign Album" sap2010:WorkflowViewState.IdRef="Assign_8" To="[Album]" Value="[If(Row.Value(Of String)(&quot;album&quot;), String.Empty).Trim()]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign PreferredFormat" sap2010:WorkflowViewState.IdRef="Assign_9" To="[PreferredFormat]" Value="[If(Row.Value(Of String)(&quot;preferred_format&quot;), String.Empty).Trim().ToUpperInvariant()]" />
+      <Assign x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="Column 'submission' does not exist yet (proposed). Missing or null = first submission." DisplayName="Assign SubmissionText" sap2010:WorkflowViewState.IdRef="Assign_10" To="[SubmissionText]" Value="[If(Row.Value(Of String)(&quot;submission&quot;), String.Empty).Trim()]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Assign Submission" sap2010:WorkflowViewState.IdRef="Assign_11" To="[Submission]" Value="[If(SubmissionText = String.Empty, 1, If(Regex.IsMatch(SubmissionText, &quot;^[0-9]{1,6}$&quot;), CInt(SubmissionText), 0))]" />
+    </Sequence>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_InvalidReason" sap2010:WorkflowViewState.IdRef="Assign_12" To="[out_InvalidReason]" Value="[String.Join(&quot;; &quot;, {If(in_Row Is Nothing OrElse TryCast(in_Row, JObject) Is Nothing, &quot;row is not a JSON object&quot;, Nothing), If(WishlistId &lt;= 0, $&quot;id '{IdText}' is not a positive integer&quot;, Nothing), If(Artist = String.Empty, &quot;artist is empty&quot;, Nothing), If(Album = String.Empty, &quot;album is empty&quot;, Nothing), If(PreferredFormat = String.Empty, &quot;preferred_format is missing (include it in the select)&quot;, If({&quot;FLAC&quot;, &quot;MP3&quot;, &quot;ANY&quot;}.Contains(PreferredFormat), Nothing, $&quot;preferred_format '{PreferredFormat}' is not FLAC, MP3 or ANY&quot;)), If(Submission &lt; 1, $&quot;submission '{SubmissionText}' is not a positive integer&quot;, Nothing)}.Where(Function(m) m IsNot Nothing))]" />
+    <If Condition="[out_InvalidReason = String.Empty]" DisplayName="If row is valid" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_4">
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reference" sap2010:WorkflowViewState.IdRef="Assign_13" To="[out_Reference]" Value="[$&quot;WL-{WishlistId}-S{Submission}&quot;]" />
+          <Assign x:TypeArguments="scg:Dictionary(x:String, x:Object)" DisplayName="Assign out_ItemInformation" sap2010:WorkflowViewState.IdRef="Assign_14" To="[out_ItemInformation]" Value="[New Dictionary(Of String, Object) From {{&quot;PayloadVersion&quot;, 1}, {&quot;WishlistId&quot;, WishlistId}, {&quot;Artist&quot;, Artist}, {&quot;Album&quot;, Album}, {&quot;PreferredFormat&quot;, PreferredFormat}, {&quot;Submission&quot;, Submission}}]" />
+          <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsValid" sap2010:WorkflowViewState.IdRef="Assign_15" To="[out_IsValid]" Value="[True]" />
+        </Sequence>
+      </If.Then>
+    </If>
+  </Sequence>
+</Activity>

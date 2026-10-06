@@ -84,6 +84,34 @@
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
         "fileName": "Tests\\WorkflowTestCaseTemplate.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "5b603a8d-4872-4a04-bdf7-09b785ed575b",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\BuildValidateQueueItemTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "1d85ead1-056f-4e38-ab59-2fb2aac3d8bd",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\LoadNewWishlistItemsDryRunTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "f90357e3-6f5b-48f4-b794-8c5a96baf3ef",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\LoadNewWishlistItemsIntegrationTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "c6d09b98-80b8-4ef4-a64f-5533e201ac59",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\SecureStringConversionGuardTestCase.xaml"
       }
     ],
     "saveToCloud": false

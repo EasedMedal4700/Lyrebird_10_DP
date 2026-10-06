@@ -1,0 +1,222 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_LoadNewWishlistItems" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueName="Lyrebird_Validate" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueFolder="Lyrebird" this:Workflows_Wishlist_LoadNewWishlistItems.in_DryRun="False" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:uca="clr-namespace:UiPath.Core.Activities;assembly=UiPath.System.Activities" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Orchestrator queue to fill. Default Lyrebird_Validate. The queue must exist and must be created with 'Enforce unique references' on." Name="in_QueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the queue. Default Lyrebird. Empty = the folder the job runs in." Name="in_QueueFolder" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional PostgREST query for the wishlist table. Empty = select=*&amp;status=eq.new&amp;order=id.asc (select=* so the proposed 'submission' column is picked up automatically once it exists)." Name="in_Query" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional rows to load instead of reading Supabase (tests, controlled manual loads). Nothing = read Supabase with in_Query." Name="in_Rows" Type="InArgument(njl:JArray)" />
+    <x:Property sap2010:Annotation.AnnotationText="True = build and log every queue item but send nothing to Orchestrator. Default False." Name="in_DryRun" Type="InArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="Items actually added to the queue. Always 0 in a dry run." Name="out_AddedCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Dry run only: items that would be sent to Orchestrator. Not checked against the queue, so some may turn out to be already queued in a real run. Always 0 in a real run." Name="out_WouldAddCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Real run only: items Orchestrator rejected as a confirmed duplicate reference (HTTP 409 'Duplicate Reference'), i.e. already in the queue. Always 0 in a dry run." Name="out_AlreadyQueuedCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Rows skipped because their Reference already appeared earlier in this batch." Name="out_DuplicateInBatchCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Rows skipped because they miss data the payload needs (see the Warn log per row)." Name="out_InvalidCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="References actually added, in load order. Always empty in a dry run." Name="out_AddedReferences" Type="OutArgument(scg:List(x:String))" />
+    <x:Property sap2010:Annotation.AnnotationText="Dry run only: references that would be sent, in load order." Name="out_WouldAddReferences" Type="OutArgument(scg:List(x:String))" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Input loader (dispatcher part) of Lyrebird_10_DP: reads wishlist rows with status 'new' from Supabase and adds one Lyrebird_Validate queue item per row.&#xA;&#xA;Safe to run repeatedly: the Reference (WL-&lt;id&gt;-S&lt;submission&gt;) is unique per row and submission, duplicates inside the batch are skipped, and the queue's 'Enforce unique references' rejects rows that are already queued. Only that confirmed rejection (OrchestratorHttpException, HTTP 409, 'Duplicate Reference') is absorbed; every other error is logged and rethrown.&#xA;Dry run sends nothing: it reports 'would add' separately from 'added' and cannot know what is already queued.&#xA;Read-only on Supabase: the wishlist status is not changed here.&#xA;Not connected to Main.xaml yet." DisplayName="Load New Wishlist Items" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="select=*&amp;status=eq.new&amp;order=id.asc" Name="DefaultQuery" />
+      <Variable x:TypeArguments="x:String" Name="Query" />
+      <Variable x:TypeArguments="x:String" Name="QueueFolder" />
+      <Variable x:TypeArguments="njl:JArray" Name="Rows" />
+      <Variable x:TypeArguments="scg:HashSet(x:String)" Default="[New HashSet(Of String)(StringComparer.OrdinalIgnoreCase)]" Name="SeenReferences" />
+      <Variable x:TypeArguments="s:DateTime" Default="[DateTime.UtcNow]" Name="StartUtc" />
+      <Variable x:TypeArguments="x:Int32" Name="RowIndex" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="Initialize" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_AddedCount" sap2010:WorkflowViewState.IdRef="Assign_1" To="[out_AddedCount]" Value="[0]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_WouldAddCount" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_WouldAddCount]" Value="[0]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_AlreadyQueuedCount" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_AlreadyQueuedCount]" Value="[0]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_DuplicateInBatchCount" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_DuplicateInBatchCount]" Value="[0]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_InvalidCount" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_InvalidCount]" Value="[0]" />
+      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Reset out_AddedReferences" sap2010:WorkflowViewState.IdRef="Assign_6" To="[out_AddedReferences]" Value="[New List(Of String)()]" />
+      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Reset out_WouldAddReferences" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_WouldAddReferences]" Value="[New List(Of String)()]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign QueueFolder" sap2010:WorkflowViewState.IdRef="Assign_8" To="[QueueFolder]" Value="[If(String.IsNullOrWhiteSpace(in_QueueFolder), Nothing, in_QueueFolder.Trim())]" />
+    </Sequence>
+    <If Condition="[in_Rows Is Nothing]" DisplayName="If no rows were passed in" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <Assign x:TypeArguments="x:String" DisplayName="Assign Query" sap2010:WorkflowViewState.IdRef="Assign_9" To="[Query]" Value="[If(String.IsNullOrWhiteSpace(in_Query), DefaultQuery, in_Query)]" />
+          <ui:LogMessage DisplayName="Log reading Supabase" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Load wishlist: reading Supabase table 'wishlist' with query '{Query}'.&quot;]" />
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows wishlist" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_Query">[Query]</InArgument>
+              <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[Rows]</OutArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+        </Sequence>
+      </If.Then>
+      <If.Else>
+        <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_4">
+          <Assign x:TypeArguments="njl:JArray" DisplayName="Assign Rows from in_Rows" sap2010:WorkflowViewState.IdRef="Assign_10" To="[Rows]" Value="[in_Rows]" />
+          <ui:LogMessage DisplayName="Log using passed rows" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;Load wishlist: using {in_Rows.Count} row(s) passed in, Supabase is not read.&quot;]" />
+        </Sequence>
+      </If.Else>
+    </If>
+    <ui:LogMessage DisplayName="Log rows to load" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Info" Message="[$&quot;Load wishlist: {Rows.Count} row(s) for queue '{in_QueueName}' (folder '{If(QueueFolder, &quot;&lt;job folder&gt;&quot;)}'). Mode: {If(in_DryRun, &quot;DRY RUN - nothing is sent to Orchestrator&quot;, &quot;LIVE - items are added to the queue&quot;)}.&quot;]" />
+    <ui:ForEach x:TypeArguments="njl:JToken" CurrentIndex="[RowIndex]" DisplayName="For each wishlist row" sap2010:WorkflowViewState.IdRef="ForEach`1_1" Values="[Rows]">
+      <ui:ForEach.Body>
+        <ActivityAction x:TypeArguments="njl:JToken">
+          <ActivityAction.Argument>
+            <DelegateInArgument x:TypeArguments="njl:JToken" Name="row" />
+          </ActivityAction.Argument>
+          <Sequence DisplayName="Body" sap2010:WorkflowViewState.IdRef="Sequence_5">
+            <Sequence.Variables>
+              <Variable x:TypeArguments="x:String" Name="Reference" />
+              <Variable x:TypeArguments="scg:Dictionary(x:String, x:Object)" Name="ItemInformation" />
+              <Variable x:TypeArguments="x:Boolean" Name="IsValid" />
+              <Variable x:TypeArguments="x:String" Name="InvalidReason" />
+              <Variable x:TypeArguments="x:String" Name="ItemText" />
+              <Variable x:TypeArguments="x:Boolean" Name="IsNewInBatch" />
+              <Variable x:TypeArguments="x:String" Name="Action" />
+            </Sequence.Variables>
+            <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildValidateQueueItem" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Wishlist\BuildValidateQueueItem.xaml">
+              <ui:InvokeWorkflowFile.Arguments>
+                <InArgument x:TypeArguments="njl:JToken" x:Key="in_Row">[row]</InArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_Reference">[Reference]</OutArgument>
+                <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_ItemInformation">[ItemInformation]</OutArgument>
+                <OutArgument x:TypeArguments="x:Boolean" x:Key="out_IsValid">[IsValid]</OutArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_InvalidReason">[InvalidReason]</OutArgument>
+              </ui:InvokeWorkflowFile.Arguments>
+            </ui:InvokeWorkflowFile>
+            <Assign x:TypeArguments="x:Boolean" sap2010:Annotation.AnnotationText="HashSet.Add returns False when the Reference was already seen in this batch. Invalid rows have an empty Reference and are never added." DisplayName="Assign IsNewInBatch" sap2010:WorkflowViewState.IdRef="Assign_11" To="[IsNewInBatch]" Value="[IsValid AndAlso SeenReferences.Add(Reference)]" />
+            <Assign x:TypeArguments="x:String" DisplayName="Assign Action" sap2010:WorkflowViewState.IdRef="Assign_12" To="[Action]" Value="[If(Not IsValid, &quot;invalid&quot;, If(Not IsNewInBatch, &quot;duplicate_in_batch&quot;, If(in_DryRun, &quot;would_add&quot;, &quot;add&quot;)))]" />
+            <Assign x:TypeArguments="x:String" DisplayName="Assign ItemText" sap2010:WorkflowViewState.IdRef="Assign_13" To="[ItemText]" Value="[If(IsValid, $&quot;{Reference} ('{ItemInformation(&quot;Artist&quot;)}' - '{ItemInformation(&quot;Album&quot;)}', {ItemInformation(&quot;PreferredFormat&quot;)})&quot;, $&quot;row {RowIndex + 1}/{Rows.Count}&quot;)]" />
+            <Switch x:TypeArguments="x:String" DisplayName="Switch on Action" Expression="[Action]" sap2010:WorkflowViewState.IdRef="Switch`1_1">
+              <Switch.Default>
+                <Sequence DisplayName="Default" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                  <Throw DisplayName="Throw unknown action" Exception="[New InvalidOperationException($&quot;Load wishlist: unknown action '{Action}' for {ItemText}.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+                </Sequence>
+              </Switch.Default>
+              <Sequence x:Key="invalid" DisplayName="invalid" sap2010:WorkflowViewState.IdRef="Sequence_7">
+                <Assign x:TypeArguments="x:Int32" DisplayName="Increment out_InvalidCount" sap2010:WorkflowViewState.IdRef="Assign_14" To="[out_InvalidCount]" Value="[out_InvalidCount + 1]" />
+                <ui:LogMessage DisplayName="Log invalid row" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Warn" Message="[$&quot;Load wishlist: {ItemText} SKIPPED (invalid): {InvalidReason}. Row: {If(row Is Nothing, &quot;null&quot;, row.ToString(Newtonsoft.Json.Formatting.None))}&quot;]" />
+              </Sequence>
+              <Sequence x:Key="duplicate_in_batch" DisplayName="duplicate_in_batch" sap2010:WorkflowViewState.IdRef="Sequence_8">
+                <Assign x:TypeArguments="x:Int32" DisplayName="Increment out_DuplicateInBatchCount" sap2010:WorkflowViewState.IdRef="Assign_15" To="[out_DuplicateInBatchCount]" Value="[out_DuplicateInBatchCount + 1]" />
+                <ui:LogMessage DisplayName="Log duplicate in batch" sap2010:WorkflowViewState.IdRef="LogMessage_5" Level="Warn" Message="[$&quot;Load wishlist: {ItemText} SKIPPED (duplicate in this batch).&quot;]" />
+              </Sequence>
+              <Sequence x:Key="would_add" DisplayName="would_add" sap2010:WorkflowViewState.IdRef="Sequence_9">
+                <Assign x:TypeArguments="x:Int32" DisplayName="Increment out_WouldAddCount" sap2010:WorkflowViewState.IdRef="Assign_16" To="[out_WouldAddCount]" Value="[out_WouldAddCount + 1]" />
+                <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Append out_WouldAddReferences" sap2010:WorkflowViewState.IdRef="Assign_17" To="[out_WouldAddReferences]" Value="[out_WouldAddReferences.Append(Reference).ToList()]" />
+                <ui:LogMessage DisplayName="Log would add" sap2010:WorkflowViewState.IdRef="LogMessage_6" Level="Info" Message="[$&quot;Load wishlist: {ItemText} WOULD ADD (dry run, NOT sent to '{in_QueueName}'). Specific content: {String.Join(&quot;, &quot;, ItemInformation.Select(Function(kv) $&quot;{kv.Key}={kv.Value} ({kv.Value.GetType().Name})&quot;))}&quot;]" />
+              </Sequence>
+              <Sequence x:Key="add" DisplayName="add" sap2010:WorkflowViewState.IdRef="Sequence_10">
+                <TryCatch DisplayName="Try add queue item" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+                  <TryCatch.Try>
+                    <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_11">
+                      <ui:AddQueueItem TimeoutMS="{x:Null}" DisplayName="Add Lyrebird_Validate queue item" FolderPath="[QueueFolder]" ItemInformationCollection="[ItemInformation]" Priority="Normal" QueueType="[in_QueueName]" Reference="[Reference]" sap2010:WorkflowViewState.IdRef="AddQueueItem_1">
+                        <ui:AddQueueItem.ItemInformation>
+                          <scg:Dictionary x:TypeArguments="x:String, InArgument" />
+                        </ui:AddQueueItem.ItemInformation>
+                      </ui:AddQueueItem>
+                      <Assign x:TypeArguments="x:Int32" DisplayName="Increment out_AddedCount" sap2010:WorkflowViewState.IdRef="Assign_18" To="[out_AddedCount]" Value="[out_AddedCount + 1]" />
+                      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Append out_AddedReferences" sap2010:WorkflowViewState.IdRef="Assign_19" To="[out_AddedReferences]" Value="[out_AddedReferences.Append(Reference).ToList()]" />
+                      <ui:LogMessage DisplayName="Log added" sap2010:WorkflowViewState.IdRef="LogMessage_7" Level="Info" Message="[$&quot;Load wishlist: {ItemText} ADDED to '{in_QueueName}'.&quot;]" />
+                    </Sequence>
+                  </TryCatch.Try>
+                  <TryCatch.Catches>
+                    <Catch x:TypeArguments="uca:OrchestratorHttpException" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+                      <ActivityAction x:TypeArguments="uca:OrchestratorHttpException">
+                        <ActivityAction.Argument>
+                          <DelegateInArgument x:TypeArguments="uca:OrchestratorHttpException" Name="httpException" />
+                        </ActivityAction.Argument>
+                        <Sequence DisplayName="Catch OrchestratorHttpException" sap2010:WorkflowViewState.IdRef="Sequence_12">
+                          <If sap2010:Annotation.AnnotationText="Confirmed duplicate = HTTP 409 Conflict AND Orchestrator's 'Duplicate Reference' text. Only then the row is already queued and the load continues. Any other Orchestrator error (1002 queue missing, 401/403 permissions, 409 for another reason, 5xx) is logged and rethrown so the job fails visibly; rerunning is safe." Condition="[CInt(httpException.StatusCode) = 409 AndAlso Regex.IsMatch(If(httpException.Message, String.Empty), &quot;duplicate\s+reference|reference\s+already\s+exists&quot;, RegexOptions.IgnoreCase)]" DisplayName="If confirmed duplicate reference" sap2010:WorkflowViewState.IdRef="If_2">
+                            <If.Then>
+                              <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_13">
+                                <Assign x:TypeArguments="x:Int32" DisplayName="Increment out_AlreadyQueuedCount" sap2010:WorkflowViewState.IdRef="Assign_20" To="[out_AlreadyQueuedCount]" Value="[out_AlreadyQueuedCount + 1]" />
+                                <ui:LogMessage DisplayName="Log already queued" sap2010:WorkflowViewState.IdRef="LogMessage_8" Level="Info" Message="[$&quot;Load wishlist: {ItemText} SKIPPED (already in '{in_QueueName}', Orchestrator: HTTP {CInt(httpException.StatusCode)} {httpException.Message}).&quot;]" />
+                              </Sequence>
+                            </If.Then>
+                            <If.Else>
+                              <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_14">
+                                <ui:LogMessage DisplayName="Log Orchestrator error" sap2010:WorkflowViewState.IdRef="LogMessage_9" Level="Error" Message="[$&quot;Load wishlist: adding {ItemText} to '{in_QueueName}' FAILED, stopping ({out_AddedCount} added so far, rerun is safe). Orchestrator: HTTP {CInt(httpException.StatusCode)} {httpException.Message}&quot;]" />
+                                <Rethrow DisplayName="Rethrow Orchestrator error" sap2010:WorkflowViewState.IdRef="Rethrow_1" />
+                              </Sequence>
+                            </If.Else>
+                          </If>
+                        </Sequence>
+                      </ActivityAction>
+                    </Catch>
+                    <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_2">
+                      <ActivityAction x:TypeArguments="s:Exception">
+                        <ActivityAction.Argument>
+                          <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+                        </ActivityAction.Argument>
+                        <Sequence DisplayName="Catch Exception" sap2010:WorkflowViewState.IdRef="Sequence_15">
+                          <ui:LogMessage DisplayName="Log add failed" sap2010:WorkflowViewState.IdRef="LogMessage_10" Level="Error" Message="[$&quot;Load wishlist: adding {ItemText} to '{in_QueueName}' FAILED, stopping ({out_AddedCount} added so far, rerun is safe): {exception.GetType().Name}: {exception.Message}&quot;]" />
+                          <Rethrow DisplayName="Rethrow add failed" sap2010:WorkflowViewState.IdRef="Rethrow_2" />
+                        </Sequence>
+                      </ActivityAction>
+                    </Catch>
+                  </TryCatch.Catches>
+                </TryCatch>
+              </Sequence>
+            </Switch>
+          </Sequence>
+        </ActivityAction>
+      </ui:ForEach.Body>
+    </ui:ForEach>
+    <If Condition="[in_DryRun]" DisplayName="If dry run (summary)" sap2010:WorkflowViewState.IdRef="If_3">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_16">
+          <ui:LogMessage DisplayName="Log dry run summary" sap2010:WorkflowViewState.IdRef="LogMessage_11" Level="Info" Message="[$&quot;Load wishlist DRY RUN finished in {(DateTime.UtcNow - StartUtc).TotalSeconds:0.0} s: {Rows.Count} row(s) read, 0 ADDED, {out_WouldAddCount} WOULD ADD (not sent; not checked against the queue, so some may already be queued), {out_DuplicateInBatchCount} duplicate(s) in batch, {out_InvalidCount} invalid.&quot;]" />
+        </Sequence>
+      </If.Then>
+      <If.Else>
+        <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_17">
+          <ui:LogMessage DisplayName="Log live summary" sap2010:WorkflowViewState.IdRef="LogMessage_12" Level="Info" Message="[$&quot;Load wishlist finished in {(DateTime.UtcNow - StartUtc).TotalSeconds:0.0} s: {Rows.Count} row(s) read, {out_AddedCount} ADDED, {out_AlreadyQueuedCount} already in queue (confirmed duplicate reference), {out_DuplicateInBatchCount} duplicate(s) in batch, {out_InvalidCount} invalid.&quot;]" />
+        </Sequence>
+      </If.Else>
+    </If>
+  </Sequence>
+</Activity>
