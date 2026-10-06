@@ -44,7 +44,8 @@ The user will then give you the current DDL so you can create or update the file
 
 ### Orchestrator assets
 
-All assets live in the Orchestrator folder **`Lyrebird`** (not `Shared/Lyrebird`) and are named `10_DP_<Name>`:
+Process assets live in the Orchestrator folder **`Lyrebird`** (not `Shared/Lyrebird`) and are named `10_DP_<Name>`.
+Assets used by several processes live in the folder **`Shared`** without a prefix.
 
 | Asset | Type | Purpose |
 |---|---|---|
@@ -52,3 +53,5 @@ All assets live in the Orchestrator folder **`Lyrebird`** (not `Shared/Lyrebird`
 | `10_DP_SupabaseApiKey` | Secret | Supabase API key |
 | `10_DP_SlsknetLogin` | Credential | Soulseek login |
 | `10_DP_DataFolder` | Text | Root data folder (`C:\Lyrebird_Data`); build subfolder paths from it, no asset per subfolder |
+| `10_DP_MusicBrainzUserAgent` | Text | App name/version for the MusicBrainz User-Agent (`Lyrebird_10_DP/1.0.0`) |
+| `PersonalEmail` (folder `Shared`) | Text | Contact email; `ValidateAlbum.xaml` sends `<10_DP_MusicBrainzUserAgent> ( <PersonalEmail> )` as User-Agent |

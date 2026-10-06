@@ -1,0 +1,134 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_ValidateWishlistItems" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Optional PostgREST query for the wishlist table. Empty = all rows with status 'new' (select=id,artist,album&amp;status=eq.new&amp;order=id.asc). Test one row with e.g. select=id,artist,album&amp;id=eq.1" Name="in_Query" Type="InArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Reads wishlist rows from Supabase (GetRows) and validates each artist/album against MusicBrainz (ValidateAlbum).&#xA;For now the result is only logged: no Supabase updates and no queue items." DisplayName="Validate Wishlist Items" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="select=id,artist,album&amp;status=eq.new&amp;order=id.asc" Name="DefaultQuery" />
+      <Variable x:TypeArguments="x:String" Name="Query" />
+      <Variable x:TypeArguments="njl:JArray" Name="Rows" />
+      <Variable x:TypeArguments="s:DateTime" Default="[DateTime.MinValue]" Name="LastRequestUtc" />
+      <Variable x:TypeArguments="scg:Dictionary(x:String, x:Int32)" Default="[New Dictionary(Of String, Integer)()]" Name="StatusCounts" />
+      <Variable x:TypeArguments="s:DateTime" Default="[DateTime.UtcNow]" Name="StartUtc" />
+      <Variable x:TypeArguments="x:Int32" Name="RowIndex" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Query" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Query]" Value="[If(String.IsNullOrWhiteSpace(in_Query), DefaultQuery, in_Query)]" />
+    <ui:LogMessage DisplayName="Log start" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Info" Message="[$&quot;Validate wishlist: reading Supabase table 'wishlist' with query '{Query}'.&quot;]" />
+    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows wishlist" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+      <ui:InvokeWorkflowFile.Arguments>
+        <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+        <InArgument x:TypeArguments="x:String" x:Key="in_Query">[Query]</InArgument>
+        <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[Rows]</OutArgument>
+      </ui:InvokeWorkflowFile.Arguments>
+    </ui:InvokeWorkflowFile>
+    <ui:LogMessage DisplayName="Log rows to validate" sap2010:WorkflowViewState.IdRef="LogMessage_5" Level="Info" Message="[$&quot;Validate wishlist: {Rows.Count} row(s) to check against MusicBrainz (about {Rows.Count} s because of the 1 request/second limit).&quot;]" />
+    <ui:ForEach x:TypeArguments="njl:JToken" CurrentIndex="[RowIndex]" DisplayName="For each wishlist row" sap2010:WorkflowViewState.IdRef="ForEach`1_1" Values="[Rows]">
+      <ui:ForEach.Body>
+        <ActivityAction x:TypeArguments="njl:JToken">
+          <ActivityAction.Argument>
+            <DelegateInArgument x:TypeArguments="njl:JToken" Name="row" />
+          </ActivityAction.Argument>
+          <Sequence DisplayName="Body" sap2010:WorkflowViewState.IdRef="Sequence_2">
+            <Sequence.Variables>
+              <Variable x:TypeArguments="x:String" Name="Status" />
+              <Variable x:TypeArguments="x:String" Name="MbArtist" />
+              <Variable x:TypeArguments="x:String" Name="MbAlbum" />
+              <Variable x:TypeArguments="x:String" Name="ArtistMbid" />
+              <Variable x:TypeArguments="x:String" Name="ReleaseGroupMbid" />
+              <Variable x:TypeArguments="x:Int32" Name="Score" />
+              <Variable x:TypeArguments="x:Boolean" Name="IsAmbiguous" />
+              <Variable x:TypeArguments="x:String" Name="ResultMessage" />
+              <Variable x:TypeArguments="x:String" Name="LogText" />
+            </Sequence.Variables>
+            <ui:LogMessage DisplayName="Log row" sap2010:WorkflowViewState.IdRef="LogMessage_6" Level="Info" Message="[$&quot;Validate wishlist: row {RowIndex + 1}/{Rows.Count} (id {row.Value(Of String)(&quot;id&quot;)}): '{row.Value(Of String)(&quot;artist&quot;)}' - '{row.Value(Of String)(&quot;album&quot;)}'.&quot;]" />
+            <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke ValidateAlbum" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\MusicBrainz\ValidateAlbum.xaml">
+              <ui:InvokeWorkflowFile.Arguments>
+                <InArgument x:TypeArguments="x:String" x:Key="in_Artist">[row.Value(Of String)("artist")]</InArgument>
+                <InArgument x:TypeArguments="x:String" x:Key="in_Album">[row.Value(Of String)("album")]</InArgument>
+                <InOutArgument x:TypeArguments="s:DateTime" x:Key="io_LastRequestUtc">[LastRequestUtc]</InOutArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_Status">[Status]</OutArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_Artist">[MbArtist]</OutArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_Album">[MbAlbum]</OutArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_ArtistMbid">[ArtistMbid]</OutArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_ReleaseGroupMbid">[ReleaseGroupMbid]</OutArgument>
+                <OutArgument x:TypeArguments="x:Int32" x:Key="out_Score">[Score]</OutArgument>
+                <OutArgument x:TypeArguments="x:Boolean" x:Key="out_IsAmbiguous">[IsAmbiguous]</OutArgument>
+                <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[ResultMessage]</OutArgument>
+              </ui:InvokeWorkflowFile.Arguments>
+            </ui:InvokeWorkflowFile>
+            <Assign x:TypeArguments="x:Int32" DisplayName="Assign StatusCounts" sap2010:WorkflowViewState.IdRef="Assign_2" To="[StatusCounts(Status)]" Value="[If(StatusCounts.ContainsKey(Status), StatusCounts(Status) + 1, 1)]" />
+            <Assign x:TypeArguments="x:String" DisplayName="Assign LogText" sap2010:WorkflowViewState.IdRef="Assign_3" To="[LogText]" Value="[$&quot;Wishlist {row.Value(Of String)(&quot;id&quot;)}: '{row.Value(Of String)(&quot;artist&quot;)}' - '{row.Value(Of String)(&quot;album&quot;)}' -&gt; {Status} (score {Score}{If(IsAmbiguous, &quot;, ambiguous&quot;, String.Empty)}). MusicBrainz: '{MbArtist}' - '{MbAlbum}', artist MBID {ArtistMbid}, release group MBID {ReleaseGroupMbid}. {ResultMessage}&quot;]" />
+            <If Condition="[Status = &quot;validated&quot;]" DisplayName="If validated" sap2010:WorkflowViewState.IdRef="If_1">
+              <If.Then>
+                <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_3">
+                  <ui:LogMessage DisplayName="Log validated" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[LogText]" />
+                </Sequence>
+              </If.Then>
+              <If.Else>
+                <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_4">
+                  <If Condition="[Status = &quot;api_error&quot;]" DisplayName="If api_error" sap2010:WorkflowViewState.IdRef="If_2">
+                    <If.Then>
+                      <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_5">
+                        <ui:LogMessage DisplayName="Log api_error" sap2010:WorkflowViewState.IdRef="LogMessage_7" Level="Error" Message="[LogText]" />
+                      </Sequence>
+                    </If.Then>
+                    <If.Else>
+                      <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                        <ui:LogMessage DisplayName="Log needs attention" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Warn" Message="[LogText]" />
+                      </Sequence>
+                    </If.Else>
+                  </If>
+                </Sequence>
+              </If.Else>
+            </If>
+          </Sequence>
+        </ActivityAction>
+      </ui:ForEach.Body>
+    </ui:ForEach>
+    <ui:LogMessage DisplayName="Log summary" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Info" Message="[$&quot;MusicBrainz validation finished for {Rows.Count} wishlist row(s) in {(DateTime.UtcNow - StartUtc).TotalSeconds:0.0} s: &quot; &amp; If(StatusCounts.Count = 0, &quot;nothing to do&quot;, String.Join(&quot;, &quot;, StatusCounts.Select(Function(kv) kv.Key &amp; &quot;=&quot; &amp; kv.Value.ToString())))]" />
+  </Sequence>
+</Activity>

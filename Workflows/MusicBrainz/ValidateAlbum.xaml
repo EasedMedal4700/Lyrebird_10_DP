@@ -1,0 +1,254 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_MusicBrainz_ValidateAlbum" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uwah="clr-namespace:UiPath.Web.Activities.Http;assembly=UiPath.Web.Activities" xmlns:uwahm="clr-namespace:UiPath.Web.Activities.Http.Models;assembly=UiPath.Web.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Artist name as entered in the wishlist." Name="in_Artist" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Album name as entered in the wishlist." Name="in_Album" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional User-Agent override. Empty = build it from assets 10_DP_MusicBrainzUserAgent (folder Lyrebird) and PersonalEmail (folder Shared)." Name="in_UserAgent" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="UTC time of the previous MusicBrainz request. Pass the same variable for every call so requests stay at most one per second; it is updated after each request." Name="io_LastRequestUtc" Type="InOutArgument(s:DateTime)" />
+    <x:Property sap2010:Annotation.AnnotationText="validated, check_spelling, not_found or api_error." Name="out_Status" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Artist credit of the best MusicBrainz match (corrected spelling)." Name="out_Artist" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Release group title of the best MusicBrainz match (corrected spelling)." Name="out_Album" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="MBID of the first credited artist of the best match." Name="out_ArtistMbid" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="MBID of the best matching release group (not a specific release)." Name="out_ReleaseGroupMbid" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="MusicBrainz search score (0-100) of the best match." Name="out_Score" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when more than one release group passes the score and name checks." Name="out_IsAmbiguous" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="Human-readable explanation of the result." Name="out_Message" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Net</x:String>
+      <x:String>System.Text</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Web.Activities</x:String>
+      <x:String>UiPath.Web.Activities.Http</x:String>
+      <x:String>UiPath.Web.Activities.Http.Models</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Web.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Validates one artist/album against the MusicBrainz release-group search (JSON).&#xA;&#xA;- validated: exactly one release group with score &gt;= 90 whose artist and title match after normalisation (case, accents, punctuation, '&amp;' vs 'and', leading 'The').&#xA;- check_spelling: results exist but none passes, or several pass (out_IsAmbiguous = True).&#xA;- not_found: no release group returned.&#xA;- api_error: request failed or MusicBrainz returned a non-2xx status.&#xA;&#xA;Does not pick a specific release or track count. User-Agent = 10_DP_MusicBrainzUserAgent (folder Lyrebird) + ' ( ' + PersonalEmail (folder Shared) + ' )'." DisplayName="MusicBrainz Validate Album" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="Lyrebird" Name="AssetFolder" />
+      <Variable x:TypeArguments="x:String" Default="10_DP_MusicBrainzUserAgent" Name="UserAgentAssetName" />
+      <Variable x:TypeArguments="x:String" Default="Shared" Name="SharedAssetFolder" />
+      <Variable x:TypeArguments="x:String" Default="PersonalEmail" Name="EmailAssetName" />
+      <Variable x:TypeArguments="x:String" Default="https://musicbrainz.org/ws/2/release-group/" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:Int32" Default="90" Name="MinScore" />
+      <Variable x:TypeArguments="x:TimeSpan" Default="[TimeSpan.FromMilliseconds(1100)]" Name="MinInterval" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Status" sap2010:WorkflowViewState.IdRef="Assign_1" To="[out_Status]" Value="[String.Empty]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Artist" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_Artist]" Value="[String.Empty]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Album" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_Album]" Value="[String.Empty]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ArtistMbid" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_ArtistMbid]" Value="[String.Empty]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ReleaseGroupMbid" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_ReleaseGroupMbid]" Value="[String.Empty]" />
+    <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_Score" sap2010:WorkflowViewState.IdRef="Assign_6" To="[out_Score]" Value="[0]" />
+    <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsAmbiguous" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_IsAmbiguous]" Value="[False]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_8" To="[out_Message]" Value="[String.Empty]" />
+    <ui:LogMessage DisplayName="Log start" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Info" Message="[$&quot;MusicBrainz: validating '{in_Artist}' - '{in_Album}'.&quot;]" />
+    <If Condition="[String.IsNullOrWhiteSpace(in_Artist) OrElse String.IsNullOrWhiteSpace(in_Album)]" DisplayName="If artist or album is empty" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Status check_spelling" sap2010:WorkflowViewState.IdRef="Assign_9" To="[out_Status]" Value="check_spelling" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_10" To="[out_Message]" Value="Artist or album is empty." />
+        </Sequence>
+      </If.Then>
+      <If.Else>
+        <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <Sequence.Variables>
+            <Variable x:TypeArguments="x:String" Name="UserAgent" />
+            <Variable x:TypeArguments="s:Func(x:String, x:String)" Name="Normalize" />
+            <Variable x:TypeArguments="scg:List(x:String)" Name="AlbumTerms" />
+            <Variable x:TypeArguments="scg:List(x:String)" Name="ArtistTerms" />
+            <Variable x:TypeArguments="x:String" Name="LuceneQuery" />
+            <Variable x:TypeArguments="x:String" Name="RequestUrl" />
+            <Variable x:TypeArguments="uwahm:HttpResponseSummary" Name="Response" />
+          </Sequence.Variables>
+          <Sequence DisplayName="Get User-Agent" sap2010:WorkflowViewState.IdRef="Sequence_4">
+            <Assign x:TypeArguments="x:String" DisplayName="Assign UserAgent from argument" sap2010:WorkflowViewState.IdRef="Assign_11" To="[UserAgent]" Value="[If(in_UserAgent Is Nothing, String.Empty, in_UserAgent.Trim())]" />
+            <If Condition="[String.IsNullOrWhiteSpace(UserAgent)]" DisplayName="If no User-Agent argument" sap2010:WorkflowViewState.IdRef="If_2">
+              <If.Then>
+                <Sequence DisplayName="Then" sap2010:Annotation.AnnotationText="User-Agent = '&lt;10_DP_MusicBrainzUserAgent&gt; ( &lt;Shared/PersonalEmail&gt; )', as MusicBrainz asks for an application name/version plus contact." sap2010:WorkflowViewState.IdRef="Sequence_5">
+                  <Sequence.Variables>
+                    <Variable x:TypeArguments="x:Object" Name="UserAgentValue" />
+                    <Variable x:TypeArguments="x:Object" Name="EmailValue" />
+                    <Variable x:TypeArguments="x:String" Name="AppName" />
+                    <Variable x:TypeArguments="x:String" Name="ContactEmail" />
+                  </Sequence.Variables>
+                  <ui:GetRobotAsset TimeoutMS="{x:Null}" AssetName="[UserAgentAssetName]" CacheStrategy="None" DisplayName="Get Asset 10_DP_MusicBrainzUserAgent" FolderPath="[AssetFolder]" sap2010:WorkflowViewState.IdRef="GetRobotAsset_1">
+                    <ui:GetRobotAsset.Value>
+                      <OutArgument x:TypeArguments="x:Object">[UserAgentValue]</OutArgument>
+                    </ui:GetRobotAsset.Value>
+                  </ui:GetRobotAsset>
+                  <ui:GetRobotAsset TimeoutMS="{x:Null}" AssetName="[EmailAssetName]" CacheStrategy="None" DisplayName="Get Asset PersonalEmail" FolderPath="[SharedAssetFolder]" sap2010:WorkflowViewState.IdRef="GetRobotAsset_2">
+                    <ui:GetRobotAsset.Value>
+                      <OutArgument x:TypeArguments="x:Object">[EmailValue]</OutArgument>
+                    </ui:GetRobotAsset.Value>
+                  </ui:GetRobotAsset>
+                  <Assign x:TypeArguments="x:String" DisplayName="Assign AppName" sap2010:WorkflowViewState.IdRef="Assign_12" To="[AppName]" Value="[If(UserAgentValue Is Nothing, String.Empty, UserAgentValue.ToString().Trim())]" />
+                  <Assign x:TypeArguments="x:String" DisplayName="Assign ContactEmail" sap2010:WorkflowViewState.IdRef="Assign_39" To="[ContactEmail]" Value="[If(EmailValue Is Nothing, String.Empty, EmailValue.ToString().Trim())]" />
+                  <If Condition="[String.IsNullOrWhiteSpace(AppName)]" DisplayName="If User-Agent asset is empty" sap2010:WorkflowViewState.IdRef="If_3">
+                    <If.Then>
+                      <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                        <Throw DisplayName="Throw missing User-Agent" Exception="[New Exception($&quot;MusicBrainz asset '{UserAgentAssetName}' in folder '{AssetFolder}' is empty.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+                      </Sequence>
+                    </If.Then>
+                  </If>
+                  <If Condition="[String.IsNullOrWhiteSpace(ContactEmail)]" DisplayName="If contact email is empty" sap2010:WorkflowViewState.IdRef="If_8">
+                    <If.Then>
+                      <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_15">
+                        <ui:LogMessage DisplayName="Log missing contact" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Warn" Message="[$&quot;MusicBrainz: asset '{EmailAssetName}' in folder '{SharedAssetFolder}' is empty, sending User-Agent without contact.&quot;]" />
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign UserAgent without contact" sap2010:WorkflowViewState.IdRef="Assign_40" To="[UserAgent]" Value="[AppName]" />
+                      </Sequence>
+                    </If.Then>
+                    <If.Else>
+                      <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_16">
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign UserAgent with contact" sap2010:WorkflowViewState.IdRef="Assign_41" To="[UserAgent]" Value="[$&quot;{AppName} ( {ContactEmail} )&quot;]" />
+                      </Sequence>
+                    </If.Else>
+                  </If>
+                </Sequence>
+              </If.Then>
+            </If>
+            <ui:LogMessage DisplayName="Log User-Agent" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Trace" Message="[$&quot;MusicBrainz User-Agent: {UserAgent}&quot;]" />
+          </Sequence>
+          <Sequence DisplayName="Build search request" sap2010:WorkflowViewState.IdRef="Sequence_7">
+            <Assign x:TypeArguments="s:Func(x:String, x:String)" DisplayName="Assign Normalize" sap2010:Annotation.AnnotationText="Lower case, strip accents, '&amp;' becomes 'and', punctuation becomes spaces, leading 'the ' removed." sap2010:WorkflowViewState.IdRef="Assign_13" To="[Normalize]" Value="[Function(s As String) Regex.Replace(Regex.Replace(Regex.Replace(If(s, String.Empty).Normalize(NormalizationForm.FormD), &quot;\p{Mn}&quot;, String.Empty).ToLowerInvariant().Replace(&quot;&amp;&quot;, &quot; and &quot;), &quot;[^\p{L}\p{N}]+&quot;, &quot; &quot;).Trim(), &quot;^the &quot;, String.Empty)]" />
+            <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign AlbumTerms" sap2010:WorkflowViewState.IdRef="Assign_14" To="[AlbumTerms]" Value="[Regex.Matches(in_Album, &quot;[\p{L}\p{N}]+&quot;).Cast(Of Match)().Select(Function(m) m.Value.ToLowerInvariant() &amp; &quot;~&quot;).ToList()]" />
+            <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign ArtistTerms" sap2010:WorkflowViewState.IdRef="Assign_15" To="[ArtistTerms]" Value="[Regex.Matches(in_Artist, &quot;[\p{L}\p{N}]+&quot;).Cast(Of Match)().Select(Function(m) m.Value.ToLowerInvariant() &amp; &quot;~&quot;).ToList()]" />
+            <Assign x:TypeArguments="x:String" DisplayName="Assign LuceneQuery" sap2010:Annotation.AnnotationText="Exact phrase OR fuzzy terms, so small typos still return candidates for check_spelling." sap2010:WorkflowViewState.IdRef="Assign_16" To="[LuceneQuery]" Value="[&quot;(releasegroup:&quot;&quot;&quot; &amp; in_Album.Trim().Replace(&quot;\&quot;, &quot;\\&quot;).Replace(&quot;&quot;&quot;&quot;, &quot;\&quot;&quot;&quot;) &amp; &quot;&quot;&quot;&quot; &amp; If(AlbumTerms.Count &gt; 0, &quot; OR releasegroup:(&quot; &amp; String.Join(&quot; AND &quot;, AlbumTerms) &amp; &quot;)&quot;, String.Empty) &amp; &quot;) AND (artist:&quot;&quot;&quot; &amp; in_Artist.Trim().Replace(&quot;\&quot;, &quot;\\&quot;).Replace(&quot;&quot;&quot;&quot;, &quot;\&quot;&quot;&quot;) &amp; &quot;&quot;&quot;&quot; &amp; If(ArtistTerms.Count &gt; 0, &quot; OR artist:(&quot; &amp; String.Join(&quot; AND &quot;, ArtistTerms) &amp; &quot;)&quot;, String.Empty) &amp; &quot;)&quot;]" />
+            <Assign x:TypeArguments="x:String" DisplayName="Assign RequestUrl" sap2010:WorkflowViewState.IdRef="Assign_17" To="[RequestUrl]" Value="[BaseUrl &amp; &quot;?query=&quot; &amp; Uri.EscapeDataString(LuceneQuery) &amp; &quot;&amp;fmt=json&amp;limit=10&quot;]" />
+            <ui:LogMessage DisplayName="Log MusicBrainz query" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Trace" Message="[$&quot;MusicBrainz search: {LuceneQuery}&quot;]" />
+          </Sequence>
+          <TryCatch DisplayName="Try call MusicBrainz" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+            <TryCatch.Try>
+              <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_8">
+                <Sequence.Variables>
+                  <Variable x:TypeArguments="x:TimeSpan" Name="Wait" />
+                  <Variable x:TypeArguments="s:DateTime" Name="RequestStartUtc" />
+                </Sequence.Variables>
+                <Assign x:TypeArguments="x:TimeSpan" DisplayName="Assign Wait" sap2010:WorkflowViewState.IdRef="Assign_18" To="[Wait]" Value="[MinInterval - (DateTime.UtcNow - io_LastRequestUtc)]" />
+                <If Condition="[Wait &gt; TimeSpan.Zero]" DisplayName="If last request was less than a second ago" sap2010:WorkflowViewState.IdRef="If_4">
+                  <If.Then>
+                    <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_9">
+                      <ui:LogMessage DisplayName="Log rate limit wait" sap2010:WorkflowViewState.IdRef="LogMessage_5" Level="Trace" Message="[$&quot;MusicBrainz: waiting {CInt(Wait.TotalMilliseconds)} ms for the 1 request/second limit.&quot;]" />
+                      <Delay DisplayName="Delay for MusicBrainz rate limit" Duration="[Wait]" sap2010:WorkflowViewState.IdRef="Delay_1" />
+                    </Sequence>
+                  </If.Then>
+                </If>
+                <Assign x:TypeArguments="s:DateTime" DisplayName="Assign RequestStartUtc" sap2010:WorkflowViewState.IdRef="Assign_42" To="[RequestStartUtc]" Value="[DateTime.UtcNow]" />
+                <uwah:NetHttpRequest BasicAuthPassword="{x:Null}" BasicAuthSecurePassword="{x:Null}" BasicAuthUsername="{x:Null}" BinaryPayload="{x:Null}" ClientCertPassword="{x:Null}" ClientCertPath="{x:Null}" ClientCertSecurePassword="{x:Null}" Cookies="{x:Null}" CustomNegotiatedAuthCredentials="{x:Null}" FilePath="{x:Null}" FormData="{x:Null}" LocalFiles="{x:Null}" OAuthToken="{x:Null}" OutputFileName="{x:Null}" OutputFileTargetFolder="{x:Null}" Parameters="{x:Null}" PathResource="{x:Null}" ProxyConfiguration="{x:Null}" ResourceFiles="{x:Null}" TextPayload="{x:Null}" AuthenticationType="None" ContinueOnError="False" DisableSslVerification="False" DisplayName="HTTP GET MusicBrainz release-group search" EnableCookies="True" FileOverwrite="AutoRename" FollowRedirects="True" FormDataParts="[New List (Of FormDataPart) From _&#xD;&#xA;{&#xD;&#xA;&#x9;New FileFormDataPart(),&#xD;&#xA;&#x9;New BinaryFormDataPart(),&#xD;&#xA;&#x9;New TextFormDataPart()&#xD;&#xA;}]" Headers="[New Dictionary(Of String, String) From { {&quot;User-Agent&quot;, UserAgent}, {&quot;Accept&quot;, &quot;application/json&quot;} }]" InitialDelay="1100" MaxRedirects="3" MaxRetryAfterDelay="30000" Method="GET" Multiplier="2" PreferRetryAfterValue="True" RequestBodyType="None" RequestUrl="[RequestUrl]" Result="[Response]" RetryCount="[3]" RetryStatusCodes="[New List (Of System.Net.HttpStatusCode) From _&#xD;&#xA;{&#xD;&#xA;&#x9;System.Net.HttpStatusCode.RequestTimeout,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.TooManyRequests,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.InternalServerError,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.BadGateway,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.ServiceUnavailable,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.GatewayTimeout&#xD;&#xA;}]" SaveRawRequestResponse="False" SaveResponseAsFile="False" TextPayloadContentType="application/json" TextPayloadEncoding="UTF-8" TimeoutInMiliseconds="[30000]" TlsProtocol="Automatic" UseJitter="True" UseOsNegotiatedAuthCredentials="True" sap2010:WorkflowViewState.IdRef="NetHttpRequest_1" />
+                <Assign x:TypeArguments="s:DateTime" DisplayName="Assign io_LastRequestUtc" sap2010:WorkflowViewState.IdRef="Assign_19" To="[io_LastRequestUtc]" Value="[DateTime.UtcNow]" />
+                <ui:LogMessage DisplayName="Log HTTP status" sap2010:WorkflowViewState.IdRef="LogMessage_6" Level="Info" Message="[$&quot;MusicBrainz: HTTP {CInt(Response.StatusCode)} in {CInt((io_LastRequestUtc - RequestStartUtc).TotalMilliseconds)} ms.&quot;]" />
+              </Sequence>
+            </TryCatch.Try>
+            <TryCatch.Catches>
+              <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+                <ActivityAction x:TypeArguments="s:Exception">
+                  <ActivityAction.Argument>
+                    <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+                  </ActivityAction.Argument>
+                  <Sequence DisplayName="Catch" sap2010:WorkflowViewState.IdRef="Sequence_10">
+                    <Assign x:TypeArguments="s:DateTime" DisplayName="Assign io_LastRequestUtc" sap2010:WorkflowViewState.IdRef="Assign_20" To="[io_LastRequestUtc]" Value="[DateTime.UtcNow]" />
+                    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Status api_error" sap2010:WorkflowViewState.IdRef="Assign_21" To="[out_Status]" Value="api_error" />
+                    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_22" To="[out_Message]" Value="[$&quot;MusicBrainz request failed: {exception.Message}&quot;]" />
+                    <ui:LogMessage DisplayName="Log request failed" sap2010:WorkflowViewState.IdRef="LogMessage_7" Level="Error" Message="[$&quot;MusicBrainz: request failed ({exception.GetType().Name}): {exception.Message}&quot;]" />
+                  </Sequence>
+                </ActivityAction>
+              </Catch>
+            </TryCatch.Catches>
+          </TryCatch>
+          <If Condition="[out_Status = String.Empty AndAlso (CInt(Response.StatusCode) &lt; 200 OrElse CInt(Response.StatusCode) &gt;= 300)]" DisplayName="If MusicBrainz returned an error" sap2010:WorkflowViewState.IdRef="If_5">
+            <If.Then>
+              <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_11">
+                <Assign x:TypeArguments="x:String" DisplayName="Assign out_Status api_error" sap2010:WorkflowViewState.IdRef="Assign_23" To="[out_Status]" Value="api_error" />
+                <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_24" To="[out_Message]" Value="[$&quot;MusicBrainz returned HTTP {CInt(Response.StatusCode)}: &quot; &amp; If(String.IsNullOrEmpty(Response.TextContent), String.Empty, Response.TextContent.Substring(0, Math.Min(300, Response.TextContent.Length)))]" />
+                <ui:LogMessage DisplayName="Log HTTP error" sap2010:WorkflowViewState.IdRef="LogMessage_8" Level="Error" Message="[out_Message]" />
+              </Sequence>
+            </If.Then>
+          </If>
+          <If Condition="[out_Status = String.Empty]" DisplayName="If request succeeded" sap2010:WorkflowViewState.IdRef="If_6">
+            <If.Then>
+              <Sequence DisplayName="Evaluate release groups" sap2010:WorkflowViewState.IdRef="Sequence_12">
+                <Sequence.Variables>
+                  <Variable x:TypeArguments="njl:JObject" Name="Json" />
+                  <Variable x:TypeArguments="scg:List(njl:JToken)" Name="ReleaseGroups" />
+                </Sequence.Variables>
+                <ui:DeserializeJson x:TypeArguments="njl:JObject" DisplayName="Deserialize search result" JsonObject="[Json]" JsonString="[Response.TextContent]" sap2010:WorkflowViewState.IdRef="DeserializeJson_1" />
+                <Assign x:TypeArguments="scg:List(njl:JToken)" DisplayName="Assign ReleaseGroups" sap2010:WorkflowViewState.IdRef="Assign_25" To="[ReleaseGroups]" Value="[If(Json(&quot;release-groups&quot;) Is Nothing, New List(Of JToken)(), Json(&quot;release-groups&quot;).ToList())]" />
+                <ui:LogMessage DisplayName="Log release groups returned" sap2010:WorkflowViewState.IdRef="LogMessage_9" Level="Info" Message="[$&quot;MusicBrainz: {ReleaseGroups.Count} release group(s) returned (total hits {Json.Value(Of Integer)(&quot;count&quot;)}).&quot; &amp; If(ReleaseGroups.Count = 0, String.Empty, &quot; Top: &quot; &amp; String.Join(&quot; | &quot;, ReleaseGroups.Take(5).Select(Function(rg) $&quot;{rg.Value(Of Integer)(&quot;score&quot;)} {String.Concat(rg(&quot;artist-credit&quot;).Select(Function(c) c.Value(Of String)(&quot;name&quot;) &amp; c.Value(Of String)(&quot;joinphrase&quot;)))} - {rg.Value(Of String)(&quot;title&quot;)} [{rg.Value(Of String)(&quot;primary-type&quot;)}]&quot;)))]" />
+                <If Condition="[ReleaseGroups.Count = 0]" DisplayName="If no release groups" sap2010:WorkflowViewState.IdRef="If_7">
+                  <If.Then>
+                    <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_13">
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Status not_found" sap2010:WorkflowViewState.IdRef="Assign_26" To="[out_Status]" Value="not_found" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_27" To="[out_Message]" Value="No release group found on MusicBrainz." />
+                    </Sequence>
+                  </If.Then>
+                  <If.Else>
+                    <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_14">
+                      <Sequence.Variables>
+                        <Variable x:TypeArguments="scg:List(njl:JToken)" Name="Candidates" />
+                        <Variable x:TypeArguments="njl:JToken" Name="Best" />
+                      </Sequence.Variables>
+                      <Assign x:TypeArguments="scg:List(njl:JToken)" DisplayName="Assign Candidates" sap2010:Annotation.AnnotationText="Score &gt;= MinScore AND normalised title = album AND normalised artist credit (full credit, first artist name or first credited name) = artist." sap2010:WorkflowViewState.IdRef="Assign_28" To="[Candidates]" Value="[ReleaseGroups.Where(Function(rg) rg.Value(Of Integer)(&quot;score&quot;) &gt;= MinScore AndAlso Normalize(rg.Value(Of String)(&quot;title&quot;)) = Normalize(in_Album) AndAlso {String.Concat(rg(&quot;artist-credit&quot;).Select(Function(c) c.Value(Of String)(&quot;name&quot;) &amp; c.Value(Of String)(&quot;joinphrase&quot;))), rg(&quot;artist-credit&quot;)(0)(&quot;artist&quot;).Value(Of String)(&quot;name&quot;), rg(&quot;artist-credit&quot;)(0).Value(Of String)(&quot;name&quot;)}.Any(Function(n) Normalize(n) = Normalize(in_Artist))).ToList()]" />
+                      <Assign x:TypeArguments="scg:List(njl:JToken)" DisplayName="Assign Candidates prefer albums" sap2010:Annotation.AnnotationText="When several release groups match, keep only primary type Album (if any) before deciding it is ambiguous." sap2010:WorkflowViewState.IdRef="Assign_29" To="[Candidates]" Value="[If(Candidates.Count &gt; 1 AndAlso Candidates.Any(Function(rg) rg.Value(Of String)(&quot;primary-type&quot;) = &quot;Album&quot;), Candidates.Where(Function(rg) rg.Value(Of String)(&quot;primary-type&quot;) = &quot;Album&quot;).ToList(), Candidates)]" />
+                      <ui:LogMessage DisplayName="Log candidates" sap2010:WorkflowViewState.IdRef="LogMessage_10" Level="Info" Message="[$&quot;MusicBrainz: {Candidates.Count} release group(s) pass score &gt;= {MinScore} and the artist/album name check.&quot;]" />
+                      <Assign x:TypeArguments="njl:JToken" DisplayName="Assign Best" sap2010:WorkflowViewState.IdRef="Assign_30" To="[Best]" Value="[If(Candidates.Count &gt; 0, Candidates(0), ReleaseGroups(0))]" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Status" sap2010:WorkflowViewState.IdRef="Assign_31" To="[out_Status]" Value="[If(Candidates.Count = 1, &quot;validated&quot;, &quot;check_spelling&quot;)]" />
+                      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsAmbiguous" sap2010:WorkflowViewState.IdRef="Assign_32" To="[out_IsAmbiguous]" Value="[Candidates.Count &gt; 1]" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Artist" sap2010:WorkflowViewState.IdRef="Assign_33" To="[out_Artist]" Value="[String.Concat(Best(&quot;artist-credit&quot;).Select(Function(c) c.Value(Of String)(&quot;name&quot;) &amp; c.Value(Of String)(&quot;joinphrase&quot;)))]" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Album" sap2010:WorkflowViewState.IdRef="Assign_34" To="[out_Album]" Value="[Best.Value(Of String)(&quot;title&quot;)]" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_ArtistMbid" sap2010:WorkflowViewState.IdRef="Assign_35" To="[out_ArtistMbid]" Value="[Best(&quot;artist-credit&quot;)(0)(&quot;artist&quot;).Value(Of String)(&quot;id&quot;)]" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_ReleaseGroupMbid" sap2010:WorkflowViewState.IdRef="Assign_36" To="[out_ReleaseGroupMbid]" Value="[Best.Value(Of String)(&quot;id&quot;)]" />
+                      <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_Score" sap2010:WorkflowViewState.IdRef="Assign_37" To="[out_Score]" Value="[Best.Value(Of Integer)(&quot;score&quot;)]" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_38" To="[out_Message]" Value="[If(out_IsAmbiguous, $&quot;Ambiguous: {Candidates.Count} release groups match: &quot; &amp; String.Join(&quot;; &quot;, Candidates.Take(5).Select(Function(rg) $&quot;{rg.Value(Of String)(&quot;title&quot;)} [{rg.Value(Of String)(&quot;primary-type&quot;)}, {rg.Value(Of String)(&quot;first-release-date&quot;)}, {rg.Value(Of String)(&quot;id&quot;)}]&quot;)), If(out_Status = &quot;validated&quot;, If(out_Artist = in_Artist.Trim() AndAlso out_Album = in_Album.Trim(), &quot;Exact match.&quot;, &quot;Matched; names corrected to MusicBrainz spelling.&quot;), If(out_Score &lt; MinScore, $&quot;Best match scores {out_Score} (below {MinScore}).&quot;, &quot;Best match has a different artist or album name.&quot;) &amp; &quot; Please check the spelling.&quot;))]" />
+                    </Sequence>
+                  </If.Else>
+                </If>
+              </Sequence>
+            </If.Then>
+          </If>
+        </Sequence>
+      </If.Else>
+    </If>
+  </Sequence>
+</Activity>
