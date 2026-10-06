@@ -23,3 +23,32 @@ file formats, project conventions, and the `uip` CLI, and will keep the project 
 
 If you are unsure where to start, use **uipath-planner** to break the request into tasks
 and route each to the right skill.
+
+## Lyrebird specifics
+
+### Database (Supabase)
+
+The process reads and writes a self-hosted Supabase (`http://tower:8000`, Postgres schema `lyrebird`)
+through `Workflows/Supabase/GetConnection.xaml`, `GetRows.xaml` and `UpdateRows.xaml`
+(HTTP Request activity, PostgREST API). Use those workflows; don't add Invoke Code or Config.xlsx entries for this.
+
+When you need the database structure (tables, columns, allowed status values, constraints), use either source:
+
+- **Supabase itself**: the live database is the source of truth. Query it, for example by running `GetRows.xaml`.
+- **The `DB` folder** next to this project (`../DB`, i.e. `C:\Users\fquaa\Documents\UiPath\Lyrebird\DB`):
+  one `<table>.sql` file per table with its `create table` statement (for example `DB/wishlist.sql`).
+
+If the `DB` folder doesn't exist, a table is missing from it, or its contents don't match what Supabase returns,
+**tell the user** which table is missing or what differs. Don't silently work around it.
+The user will then give you the current DDL so you can create or update the file.
+
+### Orchestrator assets
+
+All assets live in the Orchestrator folder **`Lyrebird`** (not `Shared/Lyrebird`) and are named `10_DP_<Name>`:
+
+| Asset | Type | Purpose |
+|---|---|---|
+| `10_DP_SupabaseUrl` | Text | Supabase base URL |
+| `10_DP_SupabaseApiKey` | Secret | Supabase API key |
+| `10_DP_SlsknetLogin` | Credential | Soulseek login |
+| `10_DP_DataFolder` | Text | Root data folder (`C:\Lyrebird_Data`); build subfolder paths from it, no asset per subfolder |

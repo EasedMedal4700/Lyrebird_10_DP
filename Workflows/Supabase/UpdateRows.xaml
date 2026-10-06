@@ -1,0 +1,125 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Supabase_UpdateRows" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:jn="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:nhr="clr-namespace:UiPath.Web.Activities.Http;assembly=UiPath.Web.Activities" xmlns:nhrm="clr-namespace:UiPath.Web.Activities.Http.Models;assembly=UiPath.Web.Activities" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ss="clr-namespace:System.Security;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Name of the table in the lyrebird schema (e.g. wishlist)." Name="in_Table" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="PostgREST filter selecting the row(s) to update, without the leading '?', e.g. id=eq.42. Required: an empty filter is refused so the whole table is never updated." Name="in_Filter" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="JSON object with the columns to change, e.g. {&quot;status&quot;:&quot;Queued&quot;}" Name="in_JsonBody" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="The updated rows as returned by Supabase (empty when the filter matched nothing)." Name="out_Rows" Type="OutArgument(jn:JArray)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="16">
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Net</x:String>
+      <x:String>System.Security</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Web.Activities</x:String>
+      <x:String>UiPath.Web.Activities.Http</x:String>
+      <x:String>UiPath.Web.Activities.Http.Models</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="16">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Web.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Updates row(s) in a Supabase table in the lyrebird schema via the REST API (PATCH) and returns the updated rows." DisplayName="Supabase Update Rows" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="RestUrl" />
+      <Variable x:TypeArguments="x:String" Name="Schema" />
+      <Variable x:TypeArguments="x:String" Name="ApiKeyAssetName" />
+      <Variable x:TypeArguments="x:String" Name="AssetFolder" />
+      <Variable x:TypeArguments="x:String" Name="RequestUrl" />
+      <Variable x:TypeArguments="nhrm:HttpResponseSummary" Name="Response" />
+    </Sequence.Variables>
+    <If DisplayName="If filter is empty" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Condition>
+        <InArgument x:TypeArguments="x:Boolean">[String.IsNullOrWhiteSpace(in_Filter)]</InArgument>
+      </If.Condition>
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw DisplayName="Throw empty filter" sap2010:WorkflowViewState.IdRef="Throw_1">
+            <Throw.Exception>
+              <InArgument x:TypeArguments="s:Exception">[New ArgumentException($"Supabase update on '{in_Table}' needs a filter (e.g. id=eq.42); refusing to update every row.")]</InArgument>
+            </Throw.Exception>
+          </Throw>
+        </Sequence>
+      </If.Then>
+    </If>
+    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" ContinueOnError="{x:Null}" DisplayName="Invoke GetConnection" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetConnection.xaml">
+      <ui:InvokeWorkflowFile.Arguments>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_RestUrl">[RestUrl]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_Schema">[Schema]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_ApiKeyAssetName">[ApiKeyAssetName]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_AssetFolder">[AssetFolder]</OutArgument>
+      </ui:InvokeWorkflowFile.Arguments>
+    </ui:InvokeWorkflowFile>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign RequestUrl" sap2010:WorkflowViewState.IdRef="Assign_2">
+      <Assign.To>
+        <OutArgument x:TypeArguments="x:String">[RequestUrl]</OutArgument>
+      </Assign.To>
+      <Assign.Value>
+        <InArgument x:TypeArguments="x:String">[RestUrl &amp; in_Table.Trim &amp; "?" &amp; in_Filter.Trim.TrimStart("?"c)]</InArgument>
+      </Assign.Value>
+    </Assign>
+    <Sequence DisplayName="Call Supabase (PATCH)" sap2010:WorkflowViewState.IdRef="Sequence_10">
+      <Sequence.Variables>
+        <Variable x:TypeArguments="ss:SecureString" Name="ApiKey" />
+      </Sequence.Variables>
+      <ui:GetSecret AssetName="[ApiKeyAssetName]" DisplayName="Get Secret Supabase API key" FolderPath="[AssetFolder]" sap2010:WorkflowViewState.IdRef="GetSecret_1">
+        <ui:GetSecret.Secret>
+          <OutArgument x:TypeArguments="ss:SecureString">[ApiKey]</OutArgument>
+        </ui:GetSecret.Secret>
+      </ui:GetSecret>
+      <nhr:NetHttpRequest AuthenticationType="None" ContinueOnError="False" DisplayName="HTTP PATCH Supabase rows" sap2010:WorkflowViewState.IdRef="NetHttpRequest_1" Method="PATCH" RequestBodyType="Text" RequestUrl="[RequestUrl]" Result="[Response]" RetryCount="[3]" RetryPolicyType="Basic" TextPayload="[in_JsonBody]" TextPayloadContentType="application/json" TimeoutInMiliseconds="[30000]">
+        <nhr:NetHttpRequest.Headers>
+          <InArgument x:TypeArguments="scg:Dictionary(x:String, x:String)">[New Dictionary(Of String, String) From {
+    {"apikey", New NetworkCredential(String.Empty, ApiKey).Password},
+    {"Authorization", "Bearer " &amp; New NetworkCredential(String.Empty, ApiKey).Password},
+    {"Accept-Profile", Schema},
+    {"Content-Profile", Schema},
+    {"Prefer", "return=representation"}
+  }]</InArgument>
+        </nhr:NetHttpRequest.Headers>
+      </nhr:NetHttpRequest>
+    </Sequence>
+    <If DisplayName="If Supabase returned an error" sap2010:WorkflowViewState.IdRef="If_2">
+      <If.Condition>
+        <InArgument x:TypeArguments="x:Boolean">[CInt(Response.StatusCode) &lt; 200 OrElse CInt(Response.StatusCode) &gt;= 300]</InArgument>
+      </If.Condition>
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <Throw DisplayName="Throw Supabase PATCH failed" sap2010:WorkflowViewState.IdRef="Throw_2">
+            <Throw.Exception>
+              <InArgument x:TypeArguments="s:Exception">[New Exception($"Supabase PATCH '{in_Table}' ({in_Filter}) failed with HTTP {CInt(Response.StatusCode)}: {Response.TextContent}")]</InArgument>
+            </Throw.Exception>
+          </Throw>
+        </Sequence>
+      </If.Then>
+    </If>
+    <ui:DeserializeJsonArray DisplayName="Deserialize updated rows" JsonArray="[out_Rows]" JsonString="[Response.TextContent]" sap2010:WorkflowViewState.IdRef="DeserializeJsonArray_1" />
+    <ui:LogMessage DisplayName="Log rows updated" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Supabase: updated {out_Rows.Count} row(s) in '{in_Table}' ({in_Filter}).&quot;]" />
+  </Sequence>
+</Activity>

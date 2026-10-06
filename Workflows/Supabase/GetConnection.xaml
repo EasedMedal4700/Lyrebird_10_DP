@@ -1,0 +1,79 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Supabase_GetConnection" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Base URL of the Supabase REST API, ending with a slash (e.g. http://tower:8000/rest/v1/). Append the table name to it." Name="out_RestUrl" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Postgres schema of the tables (lyrebird). Sent as Accept-Profile / Content-Profile header." Name="out_Schema" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Name of the Secret asset holding the Supabase API key (read it with Get Secret right before the HTTP Request)." Name="out_ApiKeyAssetName" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the Supabase assets." Name="out_AssetFolder" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="16">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="16">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Builds the Supabase connection details from Orchestrator assets only (no Config.xlsx).&#xA;&#xA;Assets (folder Lyrebird):&#xA;- 10_DP_SupabaseUrl (Text)&#xA;- 10_DP_SupabaseApiKey (Secret)" DisplayName="Get Supabase Connection" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="Lyrebird" Name="AssetFolder" />
+      <Variable x:TypeArguments="x:String" Default="10_DP_SupabaseUrl" Name="UrlAssetName" />
+      <Variable x:TypeArguments="x:String" Default="10_DP_SupabaseApiKey" Name="ApiKeyAssetName" />
+      <Variable x:TypeArguments="x:String" Default="lyrebird" Name="Schema" />
+      <Variable x:TypeArguments="x:Object" Name="SupabaseUrlValue" />
+      <Variable x:TypeArguments="x:String" Name="SupabaseUrl" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <ui:GetRobotAsset TimeoutMS="{x:Null}" AssetName="[UrlAssetName]" CacheStrategy="None" DisplayName="Get Asset 10_DP_SupabaseUrl" FolderPath="[AssetFolder]" sap2010:WorkflowViewState.IdRef="GetRobotAsset_1">
+      <ui:GetRobotAsset.Value>
+        <OutArgument x:TypeArguments="x:Object">[SupabaseUrlValue]</OutArgument>
+      </ui:GetRobotAsset.Value>
+    </ui:GetRobotAsset>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign SupabaseUrl" sap2010:WorkflowViewState.IdRef="Assign_1" To="[SupabaseUrl]" Value="[If(SupabaseUrlValue Is Nothing, String.Empty, SupabaseUrlValue.ToString.Trim.TrimEnd(&quot;/&quot;c))]" />
+    <If Condition="[String.IsNullOrWhiteSpace(SupabaseUrl)]" DisplayName="If Supabase URL is missing" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw DisplayName="Throw missing Supabase asset" Exception="[New Exception($&quot;Supabase asset '{UrlAssetName}' in folder '{AssetFolder}' is empty.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_RestUrl" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_RestUrl]" Value="[SupabaseUrl &amp; &quot;/rest/v1/&quot;]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Schema" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_Schema]" Value="[Schema]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ApiKeyAssetName" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_ApiKeyAssetName]" Value="[ApiKeyAssetName]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_AssetFolder" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_AssetFolder]" Value="[AssetFolder]" />
+    <ui:LogMessage DisplayName="Log Supabase connection" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Trace" Message="[$&quot;Supabase connection prepared for {out_RestUrl} (schema '{Schema}').&quot;]" />
+  </Sequence>
+</Activity>
