@@ -1,4 +1,4 @@
-<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_LoadNewWishlistItems" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueName="Lyrebird_Validate" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueFolder="Lyrebird" this:Workflows_Wishlist_LoadNewWishlistItems.in_DryRun="False" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:uca="clr-namespace:UiPath.Core.Activities;assembly=UiPath.System.Activities" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_LoadNewWishlistItems" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueName="Lyrebird_Validate" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueFolder="Lyrebird" this:Workflows_Wishlist_LoadNewWishlistItems.in_DryRun="False" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <x:Members>
     <x:Property sap2010:Annotation.AnnotationText="Orchestrator queue to fill. Default Lyrebird_Validate. The queue must exist and must be created with 'Enforce unique references' on." Name="in_QueueName" Type="InArgument(x:String)" />
     <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the queue. Default Lyrebird. Empty = the folder the job runs in." Name="in_QueueFolder" Type="InArgument(x:String)" />
@@ -38,21 +38,23 @@
   </TextExpression.NamespacesForImplementation>
   <TextExpression.ReferencesForImplementation>
     <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>GlobalVariablesT1PNoYwrqg</AssemblyReference>
       <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
       <AssemblyReference>Newtonsoft.Json</AssemblyReference>
       <AssemblyReference>System</AssemblyReference>
       <AssemblyReference>System.Activities</AssemblyReference>
       <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
       <AssemblyReference>System.Core</AssemblyReference>
       <AssemblyReference>System.Linq</AssemblyReference>
       <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
       <AssemblyReference>System.Private.CoreLib</AssemblyReference>
       <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Runtime.InteropServices</AssemblyReference>
       <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
       <AssemblyReference>UiPath.System.Activities</AssemblyReference>
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
-      <AssemblyReference>System.ObjectModel</AssemblyReference>
-      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
   <Sequence sap2010:Annotation.AnnotationText="Input loader (dispatcher part) of Lyrebird_10_DP: reads wishlist rows with status 'new' from Supabase and adds one Lyrebird_Validate queue item per row.&#xA;&#xA;Safe to run repeatedly: the Reference (WL-&lt;id&gt;-S&lt;submission&gt;) is unique per row and submission, duplicates inside the batch are skipped, and the queue's 'Enforce unique references' rejects rows that are already queued. Only that confirmed rejection (OrchestratorHttpException, HTTP 409, 'Duplicate Reference') is absorbed; every other error is logged and rethrown.&#xA;Dry run sends nothing: it reports 'would add' separately from 'added' and cannot know what is already queued.&#xA;Read-only on Supabase: the wishlist status is not changed here.&#xA;Not connected to Main.xaml yet." DisplayName="Load New Wishlist Items" sap2010:WorkflowViewState.IdRef="Sequence_1">
@@ -153,7 +155,7 @@
                 <TryCatch DisplayName="Try add queue item" sap2010:WorkflowViewState.IdRef="TryCatch_1">
                   <TryCatch.Try>
                     <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_11">
-                      <ui:AddQueueItem TimeoutMS="{x:Null}" DisplayName="Add Lyrebird_Validate queue item" FolderPath="[QueueFolder]" ItemInformationCollection="[ItemInformation]" Priority="Normal" QueueType="[in_QueueName]" Reference="[Reference]" sap2010:WorkflowViewState.IdRef="AddQueueItem_1">
+                      <ui:AddQueueItem TimeoutMS="{x:Null}" DisplayName="Add Lyrebird_Validate queue item" FolderPath="[QueueFolder]" sap2010:WorkflowViewState.IdRef="AddQueueItem_1" ItemInformationCollection="[ItemInformation]" Priority="Normal" QueueType="[in_QueueName]" Reference="[Reference]">
                         <ui:AddQueueItem.ItemInformation>
                           <scg:Dictionary x:TypeArguments="x:String, InArgument" />
                         </ui:AddQueueItem.ItemInformation>
@@ -164,10 +166,10 @@
                     </Sequence>
                   </TryCatch.Try>
                   <TryCatch.Catches>
-                    <Catch x:TypeArguments="uca:OrchestratorHttpException" sap2010:WorkflowViewState.IdRef="Catch`1_1">
-                      <ActivityAction x:TypeArguments="uca:OrchestratorHttpException">
+                    <Catch x:TypeArguments="ui:OrchestratorHttpException" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+                      <ActivityAction x:TypeArguments="ui:OrchestratorHttpException">
                         <ActivityAction.Argument>
-                          <DelegateInArgument x:TypeArguments="uca:OrchestratorHttpException" Name="httpException" />
+                          <DelegateInArgument x:TypeArguments="ui:OrchestratorHttpException" Name="httpException" />
                         </ActivityAction.Argument>
                         <Sequence DisplayName="Catch OrchestratorHttpException" sap2010:WorkflowViewState.IdRef="Sequence_12">
                           <If sap2010:Annotation.AnnotationText="Confirmed duplicate = HTTP 409 Conflict AND Orchestrator's 'Duplicate Reference' text. Only then the row is already queued and the load continues. Any other Orchestrator error (1002 queue missing, 401/403 permissions, 409 for another reason, 5xx) is logged and rethrown so the job fails visibly; rerunning is safe." Condition="[CInt(httpException.StatusCode) = 409 AndAlso Regex.IsMatch(If(httpException.Message, String.Empty), &quot;duplicate\s+reference|reference\s+already\s+exists&quot;, RegexOptions.IgnoreCase)]" DisplayName="If confirmed duplicate reference" sap2010:WorkflowViewState.IdRef="If_2">

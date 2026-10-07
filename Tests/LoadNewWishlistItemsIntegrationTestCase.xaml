@@ -29,21 +29,23 @@
   </TextExpression.NamespacesForImplementation>
   <TextExpression.ReferencesForImplementation>
     <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>GlobalVariablesT1PNoYwrqg</AssemblyReference>
       <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
       <AssemblyReference>Newtonsoft.Json</AssemblyReference>
       <AssemblyReference>System</AssemblyReference>
       <AssemblyReference>System.Activities</AssemblyReference>
       <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
       <AssemblyReference>System.Core</AssemblyReference>
       <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
       <AssemblyReference>System.Private.CoreLib</AssemblyReference>
       <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Runtime.InteropServices</AssemblyReference>
       <AssemblyReference>UiPath.System.Activities</AssemblyReference>
       <AssemblyReference>UiPath.Testing</AssemblyReference>
       <AssemblyReference>UiPath.Testing.Activities</AssemblyReference>
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
-      <AssemblyReference>System.ObjectModel</AssemblyReference>
-      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
   <Sequence sap2010:Annotation.AnnotationText="CONTROLLED INTEGRATION TEST - writes to Orchestrator. Run manually, only after the setup in Documentation/Lyrebird_DataContract.md section 7.&#xA;Uses a synthetic row (Supabase is not read or written) and a dedicated test queue; refuses to run against Lyrebird_Validate.&#xA;1) live load adds the item; 2) loading the same reference again must be counted as already queued (confirmed 409 'Duplicate Reference'), not added; 3) a missing queue must surface as an error, not be absorbed as a duplicate.&#xA;Each run creates one New item in the test queue (unique id from the UTC time); nothing consumes that queue." DisplayName="LoadNewWishlistItemsIntegrationTestCase" sap2010:WorkflowViewState.IdRef="Sequence_1">
