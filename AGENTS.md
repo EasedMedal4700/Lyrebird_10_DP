@@ -93,14 +93,14 @@ Note: the `description` in `project.json` still says "Supabase or Excel" and "Ly
 ```
 Lyrebird_10_DP/
 ├── Main.xaml                     # REFramework state machine: Initialization (+ run safety) → Load New Wishlist Items (once per job) → Get Transaction Data → Process → End
-├── Framework/                    # REFramework; Process invokes ProcessValidateQueueItem; GetTransactionData (limit, Reference as ID) and SetTransactionStatus (Output Outcome/Message) extended
+├── Framework/                    # REFramework; Process invokes ProcessValidateQueueItem; GetTransactionData (limit, Reference as ID) and SetTransactionStatus (Output Outcome/Message; sanitized error text, no screenshots) extended; TakeScreenshot removed
 ├── Workflows/
 │   ├── Main/                     # BuildRunSettings (test/production safety, load query)
 │   ├── Supabase/                 # GetConnection, GetRows, UpdateRows (PostgREST over HTTP)
 │   ├── MusicBrainz/              # ValidateAlbum, GetUserAgent, GetReleaseGroupReleases, ChooseRelease (release policy)
 │   ├── Orchestrator/             # FindQueueItemByReference, AddQueueItemIdempotent, GetQueueSettings
 │   └── Wishlist/                 # loader: LoadNewWishlistItems, BuildValidateQueueItem, BuildQueueReference, PersistQueueReference; performer: ProcessValidateQueueItem (+ ParseValidatePayload, DecideRowAction, BuildValidationResult, ClassifyGuardMiss, ReadExistingWishlistItem), HandleExhaustedValidateItem; RunValidateBatch (manual runner); ValidateWishlistItems (log-only prototype)
-├── Tests/                        # 17 test cases + Fixtures/*.json + MainIntegration/main-it.js (Main.xaml integration driver) + Tests.xlsx; *IntegrationTestCase and main-it.js WRITE to _IT queues and LYREBIRD_IT rows: run on purpose only. MainTestCase / ProcessTestCase / GetTransactionDataTestCase are retired stubs (delete after reopening Studio)
+├── Tests/                        # 15 test cases + Fixtures/*.json + MainIntegration/main-it.js (Main.xaml integration driver) + Tools/check-project-references.js (saved-project reference check); *IntegrationTestCase and main-it.js WRITE to _IT queues and LYREBIRD_IT rows: run on purpose only
 ├── Data/                         # Config.xlsx (Lyrebird_Validate / Lyrebird_Wishlist / Lyrebird), Input/, Output/, Temp/
 ├── Documentation/                # Lyrebird_DataContract.md, Migrations/2026-10-07_01_wishlist_part2.sql + 2026-10-07_02_wishlist_queue_reference.sql (exact applied migrations), Migration_Proposal_Part2.sql (remaining optional proposal), REFramework Documentation-EN.pdf
 ├── Governance/                   # Lyrebird_10_DP.analyzer-policy.json (analyzer policy for the build; records the ST-SEC-009 exception)
@@ -180,7 +180,8 @@ Run from the project folder (`uip` may not be on PATH; it is installed with npm)
 
 - **Validate a file**: `uip rpa validate --file-path "Workflows/Wishlist/LoadNewWishlistItems.xaml" --project-dir . --output json`
 - **Build (with analysis)**: `uip rpa build . --governance-file-type AutomationOps --governance-file-path Governance/Lyrebird_10_DP.analyzer-policy.json --output json`
-- **Offline tests**: `uip rpa run --file-path "Tests/<Name>TestCase.xaml" --project-dir . --output json` for BuildQueueReference, BuildRunSettings, BuildValidateQueueItem, LoadNewWishlistItemsDryRun, SecureStringConversionGuard, ParseValidatePayload, DecideRowAction, ChooseRelease, BuildValidationResult. Integration tests (`*IntegrationTestCase`) write to the `_IT` queues and Supabase test rows: see DataContract section 8.
+- **Offline tests**: `uip rpa run --file-path "Tests/<Name>TestCase.xaml" --project-dir . --output json` for InitAllSettings (Lyrebird config), BuildQueueReference, BuildRunSettings, BuildValidateQueueItem, LoadNewWishlistItemsDryRun, SecureStringConversionGuard, ParseValidatePayload, DecideRowAction, ChooseRelease, BuildValidationResult. Integration tests (`*IntegrationTestCase`) write to the `_IT` queues and Supabase test rows: see DataContract section 8.
+- **Project reference check (offline)**: `node Tests/Tools/check-project-references.js`
 - **Main integration tests (writes!)**: `node Tests/MainIntegration/main-it.js run`, then `node Tests/MainIntegration/main-it.js cleanup` (DataContract section 13)
 - **Production run (writes!)**: `uip rpa run --file-path "Main.xaml" --project-dir . --output json` (DataContract 13.4)
 - **Loader dry run (reads Supabase, adds nothing)**: `uip rpa run --file-path "Workflows/Wishlist/LoadNewWishlistItems.xaml" --project-dir . --input-arguments in_DryRun:=true --output json`

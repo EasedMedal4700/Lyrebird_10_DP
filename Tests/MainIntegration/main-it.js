@@ -68,7 +68,9 @@ function itemsFor(items, id) {
   return items.filter(i => i.SpecificContent && Number(i.SpecificContent.WishlistId) === id)
     .sort((a, b) => a.Id - b.Id)
     .map(i => ({ status: i.Status, retry: i.RetryNumber, ref: i.Reference, output: i.Output || null,
-                 exception: i.ProcessingExceptionType || (i.ProcessingException && i.ProcessingException.Type) || null }));
+                 exception: i.ProcessingExceptionType || (i.ProcessingException && i.ProcessingException.Type) || null,
+                 reason: (i.ProcessingException && i.ProcessingException.Reason) || null,
+                 details: (i.ProcessingException && i.ProcessingException.Details) || null }));
 }
 function row(id) {
   const out = sql(`select row_to_json(w) from lyrebird.wishlist w where id = ${Number(id)};`);
@@ -179,6 +181,12 @@ function run() {
     { status: row(H).status, msg: (row(H).message || "").slice(0, 120), rsv: row(H).reserved_release_group });
   check("S5 exhausted, no item", "MusicBrainz last-request time survives re-initialization (retries see the earlier request)",
     count(s5, /: attempt [23].*last MusicBrainz request \d\d:\d\d:\d\d\.\d{3} UTC/) >= 2, s5.filter(l => /: attempt \d.*last MusicBrainz request/.test(l)));
+
+  // technical-error handling: text only, no desktop screenshots
+  const last = itemsFor(v, H)[2] || {};
+  check("Error handling", "system exceptions are recorded as sanitized text (reason 'Type: message', details = exception type)",
+    /^Exception: INJECTED FAILURE/.test(last.reason || "") && /System\.Exception/.test(last.details || ""), { reason: (last.reason || "").slice(0, 120), details: last.details });
+  check("Error handling", "no screenshot folder was created", !fs.existsSync(path.join(PROJECT, "Exceptions_Screenshots")), null);
 
   const failed = results.filter(r => !r.ok).length;
   fs.writeFileSync(REPORT, JSON.stringify({ when: new Date().toISOString(), rows: { A, B, C, E, F, G, H }, failed, results }, null, 2));

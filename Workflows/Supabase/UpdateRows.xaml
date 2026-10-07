@@ -104,7 +104,7 @@
               <x:Boolean x:Key="IsExpanded">True</x:Boolean>
             </scg:Dictionary>
           </sap:WorkflowViewStateService.ViewState>
-          <Throw DisplayName="Throw Supabase PATCH failed" Exception="[New Exception($&quot;Supabase PATCH '{in_Table}' ({in_Filter}) failed with HTTP {CInt(Response.StatusCode)}: {Response.TextContent}&quot;)]" sap:VirtualizedContainerService.HintSize="416,48" sap2010:WorkflowViewState.IdRef="Throw_2" />
+          <Throw DisplayName="Throw Supabase PATCH failed" Exception="[New Exception($&quot;Supabase PATCH '{in_Table}' ({in_Filter}) failed with HTTP {CInt(Response.StatusCode)}: {Left(If(Response.TextContent, String.Empty), 500)}&quot;)]" sap:VirtualizedContainerService.HintSize="416,48" sap2010:WorkflowViewState.IdRef="Throw_2" />
         </Sequence>
       </If.Then>
     </If>

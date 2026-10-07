@@ -564,7 +564,7 @@ Initialization ──(first run)──> run settings: Config + BuildRunSettings 
 
   Every write uses the row-version guard; a failing reconciliation leaves row and reservation unchanged and logs an error.
 - **MusicBrainz timing**: `LastRequestUtc` lives in Main (whole job) and is passed InOut to Process. After a failed transaction it is set to "now" (the failed attempt's own value is lost with the exception), so the 1.1 s spacing also holds across retries and re-initialization.
-- **Stop / restart**: Orchestrator stop requests are checked before every transaction (REFramework `Should Stop`); `in_MaxTransactions` does the same after N transactions. A restart reloads safely (`already queued`), and recovery finishes half-done items from the output queue, so no work is duplicated.
+- **Stop / restart**: the REFramework checks for an Orchestrator Stop request before every transaction (`Should Stop` in the Get Transaction Data state). **Not verified**: the Stop button needs a published process and an Orchestrator job, which were not used. `in_MaxTransactions` stops at a different place (inside `GetTransactionData.xaml`) and does not prove the Stop button works. A restart reloads safely (`already queued`), and recovery finishes half-done items from the output queue, so no work is duplicated (verified with `in_MaxTransactions`, § 13.5).
 
 ### 13.3 Main.xaml arguments
 
@@ -580,9 +580,18 @@ Initialization ──(first run)──> run settings: Config + BuildRunSettings 
 
 ### 13.4 First manual production run
 
-Prerequisites: the six original rows are `new`, submission 1 (§ 12); `Lyrebird_Validate` and `Lyrebird_Wishlist` have no active items; no trigger. The robot needs folder `Lyrebird`: Queues View, Transactions View / Create / Edit, Assets View (and Assets View in `Shared`).
+Prerequisites:
+- the six original rows are `new`, submission 1, without `queue_reference` (§ 12);
+- **`Lyrebird_Validate` has no New, In Progress or retry items** (Get Transaction Data takes the next New item of the queue, whatever loaded it) and `Lyrebird_Wishlist` has no active items:
+  ```
+  uip or queue-items list --folder-path Lyrebird --queue-name Lyrebird_Validate --status New --output json
+  uip or queue-items list --folder-path Lyrebird --queue-name Lyrebird_Validate --status InProgress --output json
+  ```
+  Both must return `"Returned": 0`;
+- no trigger and no other job running for this process;
+- robot permissions in folder `Lyrebird`: Queues View, Transactions View / Create / Edit, Assets View (and Assets View in `Shared`).
 
-From the project folder (all defaults = production):
+**Full run** (all defaults = production), from the project folder:
 
 ```
 uip rpa run --file-path "Main.xaml" --project-dir . --output json
@@ -590,7 +599,25 @@ uip rpa run --file-path "Main.xaml" --project-dir . --output json
 
 In Studio: open `Main.xaml` → Run File (or Debug) → leave every argument empty / default (`in_LoadWishlist = True`, `in_MaxTransactions = 0`).
 
-Expected: the startup load adds `Radiohed - Ok Computr | WL-1-S1` … `asdfghjkl - asdfghjkl | WL-8-S1` (6 items), then each item is processed: row 1 → `check_spelling`, row 4 and row 5 → `check_spelling` with `RELEASE_CHOICE:` (set `chosen_release_id` and resubmit, § 4), the others depending on MusicBrainz. Nothing reaches `Lyrebird_Wishlist` until a release is chosen. To try a single row first: `--input-arguments "in_LoadFilter=id=in.(4)" --input-arguments in_MaxTransactions:=1`.
+Expected: the startup load adds `Radiohed - Ok Computr | WL-1-S1` … `asdfghjkl - asdfghjkl | WL-8-S1` (6 items), then each item is processed: row 1 → `check_spelling`, rows 4 and 5 → `check_spelling` with `RELEASE_CHOICE:` (set `chosen_release_id` and resubmit, § 4), the others depending on MusicBrainz. Nothing reaches `Lyrebird_Wishlist` until a release is chosen.
+
+**Single-row trial.** `in_LoadFilter` only limits what the startup load **adds**; Get Transaction Data still takes the next New item of the whole queue. So:
+
+- *Through Main.xaml* (only valid when the prerequisite above holds, i.e. the queue has no other New item): `in_LoadFilter` adds just that row, and `in_MaxTransactions = 1` stops after it:
+  ```
+  uip rpa run --file-path "Main.xaml" --project-dir . --input-arguments "in_LoadFilter=id=in.(4)" --input-arguments in_MaxTransactions:=1 --output json
+  ```
+  If the queue might hold other New items, do not use this; use the targeted method below.
+- *Targeted, whatever else is in the queue*: add the one row, then process exactly its Reference with the manual runner (Get Transaction Item with Reference = Equals):
+  ```
+  uip rpa run --file-path "Workflows/Wishlist/LoadNewWishlistItems.xaml" --project-dir . --input-arguments "in_Query=select=*&status=eq.new&id=eq.4" --output json
+  ```
+  Read the stored Reference (`select queue_reference from lyrebird.wishlist where id = 4;`), put it in a JSON file (non-ASCII names do not survive the command line) and run:
+  ```
+  {"in_MaxItems": 1, "in_Reference": "Radiohead - OK Computer | WL-4-S1"}
+  uip rpa run --file-path "Workflows/Wishlist/RunValidateBatch.xaml" --project-dir . --input-arguments-file one-row.json --output json
+  ```
+  `RunValidateBatch` uses the same performer and transaction statuses as Main, but not Main's startup checks or the last-attempt reconciliation.
 
 ### 13.5 Verification (2026-10-07)
 
@@ -599,7 +626,9 @@ Expected: the startup load adds `Radiohed - Ok Computr | WL-1-S1` … `asdfghjkl
 | `uip rpa validate --project-dir .` / analyzed build with the policy file | 0 diagnostics / **PASS** |
 | Offline tests: `BuildRunSettings` (14), `BuildQueueReference` (12), `ParseValidatePayload` (9), `DecideRowAction` (14), `ChooseRelease` (11), `BuildValidationResult` (17), `BuildValidateQueueItem`, `LoadNewWishlistItemsDryRun`, `SecureStringConversionGuard` (53 workflows), `InitAllSettings` | PASS |
 | `GetQueueSettings` against the real queues | reads auto retry / max retries / unique references; missing queue → exception |
-| **Main.xaml integration** (`node Tests/MainIntegration/main-it.js run`, queues `Lyrebird_Validate_Main_IT` / `Lyrebird_Wishlist_Main_IT`, 7 marked rows) | **20/20 checks PASS** |
+| **Main.xaml integration** (`node Tests/MainIntegration/main-it.js run`, queues `Lyrebird_Validate_Main_IT` / `Lyrebird_Wishlist_Main_IT`, 7 marked rows) | **22/22 checks PASS** (rerun after the cleanup changes) |
+| `InitAllSettingsTestCase` (replaces the REFramework template checks) | PASS: Config is the Lyrebird production configuration (queues, folder, `MaxRetryNumber` 0, faulted on errors, no placeholder, no screenshot setting) and resolves to production mode |
+| `node Tests/Tools/check-project-references.js` | no missing-file references (main file, entry point, 15 registered test cases, every Invoke Workflow path) |
 
 Main.xaml scenarios:
 
@@ -610,17 +639,61 @@ Main.xaml scenarios:
 | S2 empty queue | load added 0, "no more transaction data", job ended cleanly |
 | S3 technical retry + stop + restart | run 1: attempt 1 failed after enqueue → Failed (Application, shown as Retried), retry item New, job stopped by `in_MaxTransactions = 1`; run 2 (restart): load `0 added, 1 already queued`, retry recovered from the download item → Successful, row `queued`, still one download item |
 | S4 exhausted, download item exists | 3 attempts (Retried, Retried, Failed with `RetryNo` 2); reconciliation `recovered_queued`: row `queued`, reservation kept, one download item; re-initializations logged "Startup load already ran in this job" |
+| Error handling | system exceptions are recorded as text only: failure reason `Type: message` (values after authorization / apikey / bearer / password / secret masked, max 1000 characters), details = exception type; no screenshot folder is created |
 | S5 exhausted, no download item | 3 attempts; reconciliation `released_failed`: row `failed` with `TECHNICAL: validation failed 3 time(s) …`, reservation released, no download item; retries logged the carried-over last MusicBrainz request time (not "none") |
 
 Get Transaction Item with an explicit `FolderPath` and Set Transaction Status (folder taken from the item) worked from a local run whose own folder is not `Lyrebird`.
 
 After the run, `node Tests/MainIntegration/main-it.js cleanup` deleted the 7 test rows (ids recorded by the script) and every item of the two `_Main_IT` queues (they remain as `Deleted` records). The six original rows were not touched.
 
+**Technical-error handling (cleanup, 2026-10-07).** No screenshots: `Framework/TakeScreenshot.xaml`, the `Exceptions_Screenshots` folder and the `ExScreenshotsFolderPath` setting are removed; `SetTransactionStatus` logs and stores the sanitized text instead. Supabase error bodies in exceptions are capped at 500 characters; the MusicBrainz User-Agent (which contains the contact e-mail) is no longer logged, only the app name and whether a contact is set. No workflow logs request headers or the Supabase key.
+
+**Test inventory (cleanup, 2026-10-07).** The REFramework template tests `MainTestCase`, `ProcessTestCase`, `GetTransactionDataTestCase` (they would run against production), `InitAllApplicationsTestCase` (tested an empty template stub), `WorkflowTestCaseTemplate` (an empty skeleton registered as a test) and their data file `Tests.xlsx` are removed and unregistered. Their useful coverage lives on in `InitAllSettingsTestCase` (now the Lyrebird configuration test) and the Main.xaml integration tests. A Studio session that was open during the removal still lists them and refuses to run Main.xaml until the project is reopened; afterwards `node Tests/Tools/check-project-references.js` must report no missing references.
+
 ### 13.6 Remaining limitations (step 3)
 
-- Orchestrator's Stop signal was not exercised locally (needs a published process and an Orchestrator job); `in_MaxTransactions` uses the same stop point between transactions.
-- A hard kill during a transaction leaves the item In Progress → Abandoned after 24 h, not retried (`RetryAbandonedItems = No`); the row needs a resubmission.
-- When Supabase is unreachable on the last attempt, the reconciliation cannot write either: row and reservation stay as they are (logged as an error) and the row needs a manual check.
-- The REFramework still takes a full-desktop screenshot on every system exception (`Exceptions_Screenshots`, project folder). It is useless for this headless process and may capture whatever is on screen; consider removing the TakeScreenshot step from `Framework/SetTransactionStatus.xaml`.
-- `Tests/MainTestCase.xaml`, `ProcessTestCase.xaml`, `GetTransactionDataTestCase.xaml` are retired stubs (they would have run against production). They are no longer registered; delete them after reopening the project in Studio (the open Studio session still lists them and refuses to run Main.xaml while they are missing).
+- **Stop button unverified.** Orchestrator's Stop signal was not exercised (needs a published process and an Orchestrator job). The `in_MaxTransactions` test stops through another check and is no evidence for it. Verify it in the first supervised Orchestrator job: start, press Stop while items remain, and confirm the job ends after the current transaction with the remaining items still New.
+- A hard kill during a transaction leaves the item In Progress → Abandoned after 24 h, not retried (`RetryAbandonedItems = No`). Recovery: § 13.7 A.
+- When Supabase is unreachable on the last attempt, the reconciliation cannot write either: row and reservation stay as they are (logged as an error). Recovery: § 13.7 B.
 - Every real album still needs a `chosen_release_id` once (§ 11.4); process 20 does not exist yet.
+
+### 13.7 Recovery runbooks
+
+Both cases below leave a `Lyrebird_Validate` item that Orchestrator will not process again, and a wishlist row that is still `new` for that submission. The row may hold an album reservation, and an item with the same Reference may already exist in `Lyrebird_Wishlist`. **Never release a reservation while such an output item exists**: it is the download request for that album.
+
+**A. Killed or abandoned transaction.** The job was killed (robot crash, machine restart, "Kill" in Orchestrator) while processing an item. The item stays In Progress and becomes **Abandoned** after 24 h; it is not retried (`RetryAbandonedItems = No`). The loader reports the row as already queued, so a rerun of Main does not pick it up again.
+
+**B. Supabase unavailable during the last attempt.** The last attempt failed and the reconciliation (§ 13.2) could not reach Supabase either: the log shows `last attempt failed and the reconciliation failed too … Row and reservation left unchanged`. The item is Failed (Application) with no retry left.
+
+Steps (both cases; first fix the cause, e.g. Supabase is reachable again, and make sure no job is running):
+
+1. **Find the row** (the Reference is in the item and in the log):
+   ```sql
+   select id, status, submission, queue_reference, reserved_release_group, message
+   from lyrebird.wishlist where queue_reference = '<Reference>';
+   ```
+   If the row is no longer `new`, or its `queue_reference` differs, nothing is open: stop here.
+2. **Look for the output item** with the same Reference:
+   ```
+   uip or queue-items list --folder-path Lyrebird --queue-name Lyrebird_Wishlist --limit 100 --output json --output-filter "[?Reference=='<Reference>'].[Status, Reference, SpecificContent]"
+   ```
+   (Orchestrator lists new items with a short delay; check again after a minute if the step-1 row holds a reservation.)
+3. **Preferred: retry the same item.** Orchestrator → folder Lyrebird → Queues → `Lyrebird_Validate` → Transactions → the Abandoned / Failed item → **Retry**. The retry keeps the Reference. Run Main (or `RunValidateBatch` with `in_Reference`, § 13.4). The performer then finishes the row **from the existing output item** (status `queued`, reservation kept, no second download item) or, if there is none, validates it again. No database edit is needed. *Not exercised in the automated tests (no CLI or API path was used for manual retry); the recovery logic it relies on is the tested `crash_after_enqueue` / S3 path.*
+4. **Only if the item cannot be retried** (for example it was deleted):
+   - *Output item exists* (step 2): keep the reservation. Finish the row from the item; use the values of its specific content:
+     ```sql
+     update lyrebird.wishlist
+        set status = 'queued', mb_artist = '<Artist>', mb_album = '<Album>', mbid = '<MbReleaseGroupId>',
+            mb_release_id = '<MbReleaseId>', mb_artist_id = '<MbArtistId>', track_count = <TrackCount>,
+            reserved_release_group = '<MbReleaseGroupId>',
+            message = 'Finished by hand from the existing Lyrebird_Wishlist item <Reference>.'
+      where id = <id> and status = 'new' and submission = <n> and queue_reference = '<Reference>';
+     ```
+     Do not resubmit in this case: a resubmission would validate again and add a second download item for the same album (process 20 would ignore the old one only through the submission check).
+   - *No output item*: nothing was queued, so release the reservation and resubmit; the next load creates a new Reference:
+     ```sql
+     update lyrebird.wishlist
+        set reserved_release_group = null, submission = submission + 1, message = null
+      where id = <id> and status = 'new' and submission = <n> and queue_reference = '<Reference>';
+     ```
+   Every statement is guarded by status, submission and Reference, so it changes nothing if the row moved on meanwhile (check `UPDATE 1`).

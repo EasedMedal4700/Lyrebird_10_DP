@@ -92,7 +92,7 @@
     <If Condition="[CInt(Response.StatusCode) &lt; 200 OrElse CInt(Response.StatusCode) &gt;= 300]" DisplayName="If Supabase returned an error" sap:VirtualizedContainerService.HintSize="649.6,178.4" sap2010:WorkflowViewState.IdRef="If_1">
       <If.Then>
         <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
-          <Throw DisplayName="Throw Supabase GET failed" Exception="[New Exception($&quot;Supabase GET '{in_Table}' failed with HTTP {CInt(Response.StatusCode)}: {Response.TextContent}&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+          <Throw DisplayName="Throw Supabase GET failed" Exception="[New Exception($&quot;Supabase GET '{in_Table}' failed with HTTP {CInt(Response.StatusCode)}: {Left(If(Response.TextContent, String.Empty), 500)}&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
         </Sequence>
       </If.Then>
     </If>

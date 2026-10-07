@@ -1,125 +1,79 @@
-<Activity mc:Ignorable="sap sap2010" x:Class="InitAllSettingsTestCase" VisualBasic.Settings="{x:Null}" sap:VirtualizedContainerService.HintSize="819.333333333333,1189.33333333333" sap2010:WorkflowViewState.IdRef="InitAllSettingsTestCase_1" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uta="clr-namespace:UiPath.Testing.Activities;assembly=UiPath.Testing.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sap sap2010" x:Class="InitAllSettingsTestCase" VisualBasic.Settings="{x:Null}" sap2010:WorkflowViewState.IdRef="ActivityBuilder_1" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uta="clr-namespace:UiPath.Testing.Activities;assembly=UiPath.Testing.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <TextExpression.NamespacesForImplementation>
-    <scg:List x:TypeArguments="x:String" Capacity="44">
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
       <x:String>Microsoft.VisualBasic</x:String>
       <x:String>Microsoft.VisualBasic.Activities</x:String>
       <x:String>System</x:String>
       <x:String>System.Activities</x:String>
       <x:String>System.Activities.Expressions</x:String>
       <x:String>System.Activities.Statements</x:String>
-      <x:String>System.Activities.Validation</x:String>
-      <x:String>System.Activities.XamlIntegration</x:String>
-      <x:String>System.Collections</x:String>
       <x:String>System.Collections.Generic</x:String>
       <x:String>System.Collections.ObjectModel</x:String>
-      <x:String>System.Data</x:String>
-      <x:String>System.Diagnostics</x:String>
-      <x:String>System.Drawing</x:String>
-      <x:String>System.IO</x:String>
       <x:String>System.Linq</x:String>
-      <x:String>System.Net.Mail</x:String>
-      <x:String>System.Runtime.Serialization</x:String>
-      <x:String>System.Windows.Markup</x:String>
-      <x:String>System.Xml</x:String>
-      <x:String>System.Xml.Linq</x:String>
       <x:String>UiPath.Core</x:String>
       <x:String>UiPath.Core.Activities</x:String>
-      <x:String>UiPath.Shared.Activities</x:String>
       <x:String>UiPath.Testing</x:String>
       <x:String>UiPath.Testing.Activities</x:String>
-      <x:String>GlobalVariablesNamespace</x:String>
-      <x:String>GlobalConstantsNamespace</x:String>
     </scg:List>
   </TextExpression.NamespacesForImplementation>
   <TextExpression.ReferencesForImplementation>
-    <scg:List x:TypeArguments="AssemblyReference" Capacity="52">
-      <AssemblyReference>GlobalVariablesT1PNoYwrqg</AssemblyReference>
-      <AssemblyReference>Microsoft.Bcl.AsyncInterfaces</AssemblyReference>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
       <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
-      <AssemblyReference>mscorlib</AssemblyReference>
-      <AssemblyReference>PresentationCore</AssemblyReference>
-      <AssemblyReference>PresentationFramework</AssemblyReference>
       <AssemblyReference>System</AssemblyReference>
       <AssemblyReference>System.Activities</AssemblyReference>
       <AssemblyReference>System.Collections</AssemblyReference>
-      <AssemblyReference>System.ComponentModel.Composition</AssemblyReference>
-      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
       <AssemblyReference>System.Core</AssemblyReference>
-      <AssemblyReference>System.Data</AssemblyReference>
-      <AssemblyReference>System.Data.DataSetExtensions</AssemblyReference>
-      <AssemblyReference>System.Drawing</AssemblyReference>
       <AssemblyReference>System.Linq</AssemblyReference>
-      <AssemblyReference>System.Memory</AssemblyReference>
-      <AssemblyReference>System.ObjectModel</AssemblyReference>
       <AssemblyReference>System.Private.CoreLib</AssemblyReference>
-      <AssemblyReference>System.Runtime.InteropServices</AssemblyReference>
-      <AssemblyReference>System.Runtime.Serialization</AssemblyReference>
-      <AssemblyReference>System.ServiceModel</AssemblyReference>
-      <AssemblyReference>System.ValueTuple</AssemblyReference>
-      <AssemblyReference>System.Xaml</AssemblyReference>
-      <AssemblyReference>System.Xml</AssemblyReference>
-      <AssemblyReference>System.Xml.Linq</AssemblyReference>
-      <AssemblyReference>UiPath.Excel</AssemblyReference>
-      <AssemblyReference>UiPath.OCR.Activities.Design</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
       <AssemblyReference>UiPath.System.Activities</AssemblyReference>
-      <AssemblyReference>UiPath.System.Activities.Design</AssemblyReference>
       <AssemblyReference>UiPath.Testing</AssemblyReference>
       <AssemblyReference>UiPath.Testing.Activities</AssemblyReference>
-      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
-      <AssemblyReference>UiPath.UIAutomationCore</AssemblyReference>
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
-      <AssemblyReference>WindowsBase</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
-  <Sequence sap2010:Annotation.AnnotationText="Verify if the InitAllSettings workflow works as expected.&#xA;The verification should check if initalization of settings was successful: if the Config dictionary was created, if it contains a certain key etc." DisplayName="InitAllSettingsTestCase" sap:VirtualizedContainerService.HintSize="618,1024.66666666667" sap2010:WorkflowViewState.IdRef="Sequence_1">
+  <Sequence sap2010:Annotation.AnnotationText="Offline: Data/Config.xlsx as InitAllSettings reads it (no Orchestrator assets are configured in the Assets sheet). Checks the Lyrebird production settings Main.xaml relies on, and that they resolve to PRODUCTION mode in BuildRunSettings. Replaces the REFramework template checks (Config loaded, MaxRetryNumber exists)." DisplayName="InitAllSettingsTestCase" sap2010:WorkflowViewState.IdRef="Sequence_1">
     <Sequence.Variables>
       <Variable x:TypeArguments="scg:Dictionary(x:String, x:Object)" Name="Config" />
+      <Variable x:TypeArguments="s:Func(x:String, x:String)" Name="Cfg" />
+      <Variable x:TypeArguments="x:Boolean" Name="TestMode" />
+      <Variable x:TypeArguments="x:String" Name="LoadQuery" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="Problems" />
     </Sequence.Variables>
     <sap:WorkflowViewStateService.ViewState>
       <scg:Dictionary x:TypeArguments="x:String, x:Object">
         <x:Boolean x:Key="IsExpanded">True</x:Boolean>
-        <x:Boolean x:Key="IsAnnotationDocked">True</x:Boolean>
       </scg:Dictionary>
     </sap:WorkflowViewStateService.ViewState>
-    <ui:LogMessage DisplayName="Log Message - InitAllSettingsTestCase" sap:VirtualizedContainerService.HintSize="576,94.6666666666667" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[&quot;InitAllSettingsTestCase started.&quot;]" />
-    <Sequence DisplayName="... Given" sap:VirtualizedContainerService.HintSize="576,147.333333333333" sap2010:WorkflowViewState.IdRef="Sequence_2">
-      <sap:WorkflowViewStateService.ViewState>
-        <scg:Dictionary x:TypeArguments="x:String, x:Object">
-          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
-        </scg:Dictionary>
-      </sap:WorkflowViewStateService.ViewState>
-      <ui:Comment DisplayName="Prerequisites" sap:VirtualizedContainerService.HintSize="334,55.3333333333333" sap2010:WorkflowViewState.IdRef="Comment_1" Text="// Add prerequisite activities here" />
-    </Sequence>
-    <Sequence DisplayName="... When" sap:VirtualizedContainerService.HintSize="576,206" sap2010:WorkflowViewState.IdRef="Sequence_3">
-      <sap:WorkflowViewStateService.ViewState>
-        <scg:Dictionary x:TypeArguments="x:String, x:Object">
-          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
-        </scg:Dictionary>
-      </sap:WorkflowViewStateService.ViewState>
-      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke InitAllSettings workflow" sap:VirtualizedContainerService.HintSize="334,114" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Framework/InitAllSettings.xaml">
+    <Sequence DisplayName="... Given / When: read the configuration" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke InitAllSettings workflow" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Framework\InitAllSettings.xaml">
         <ui:InvokeWorkflowFile.Arguments>
           <InArgument x:TypeArguments="x:String" x:Key="in_ConfigFile">Data\Config.xlsx</InArgument>
-          <InArgument x:TypeArguments="s:String[]" x:Key="in_ConfigSheets">[{"Settings","Constants"}]</InArgument>
+          <InArgument x:TypeArguments="s:String[]" x:Key="in_ConfigSheets">[{"Settings", "Constants"}]</InArgument>
           <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_Config">[Config]</OutArgument>
         </ui:InvokeWorkflowFile.Arguments>
       </ui:InvokeWorkflowFile>
+      <Assign x:TypeArguments="s:Func(x:String, x:String)" DisplayName="Assign Cfg" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Cfg]" Value="[Function(k As String) If(Config IsNot Nothing AndAlso Config.ContainsKey(k), Convert.ToString(Config(k)).Trim(), &quot;&lt;missing&gt;&quot;)]" />
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildRunSettings (production config)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Main\BuildRunSettings.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_ValidateQueueName">[Cfg("OrchestratorQueueName")]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_WishlistQueueName">[Cfg("WishlistQueueName")]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_LoadFilter">[String.Empty]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_TestFailAfterStep">[String.Empty]</InArgument>
+          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_TestMode">[TestMode]</OutArgument>
+          <OutArgument x:TypeArguments="x:String" x:Key="out_LoadQuery">[LoadQuery]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
     </Sequence>
-    <Sequence sap2010:Annotation.AnnotationText="Check if the Config contains key-value pairs&#xA;Check if the Config contains certain key information" DisplayName="... Then" sap:VirtualizedContainerService.HintSize="576,302.666666666667" sap2010:WorkflowViewState.IdRef="Sequence_4">
-      <sap:WorkflowViewStateService.ViewState>
-        <scg:Dictionary x:TypeArguments="x:String, x:Object">
-          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
-          <x:Boolean x:Key="IsAnnotationDocked">True</x:Boolean>
-        </scg:Dictionary>
-      </sap:WorkflowViewStateService.ViewState>
-      <uta:VerifyExpressionWithOperator AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="True" DisplayName="Verify if Config was loaded" sap:VirtualizedContainerService.HintSize="534,62.6666666666667" sap2010:WorkflowViewState.IdRef="VerifyExpressionWithOperator_1" Operator="GreaterThan" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False">
-        <uta:VerifyExpressionWithOperator.FirstExpression>
-          <InArgument x:TypeArguments="x:Int32">[Config.Count]</InArgument>
-        </uta:VerifyExpressionWithOperator.FirstExpression>
-        <uta:VerifyExpressionWithOperator.SecondExpression>
-          <InArgument x:TypeArguments="x:Int32">[0]</InArgument>
-        </uta:VerifyExpressionWithOperator.SecondExpression>
-      </uta:VerifyExpressionWithOperator>
-      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="True" DisplayName="Verify if setting exists in Config" Expression="[Config.ContainsKey(&quot;MaxRetryNumber&quot;)]" sap:VirtualizedContainerService.HintSize="534,62.6666666666667" sap2010:WorkflowViewState.IdRef="VerifyExpression_1" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+    <Sequence DisplayName="... Then" sap2010:WorkflowViewState.IdRef="Sequence_3">
+      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign Problems" sap2010:WorkflowViewState.IdRef="Assign_2" To="[Problems]" Value="[{If(Cfg(&quot;OrchestratorQueueName&quot;) = &quot;Lyrebird_Validate&quot;, Nothing, $&quot;OrchestratorQueueName='{Cfg(&quot;OrchestratorQueueName&quot;)}'&quot;), If(Cfg(&quot;WishlistQueueName&quot;) = &quot;Lyrebird_Wishlist&quot;, Nothing, $&quot;WishlistQueueName='{Cfg(&quot;WishlistQueueName&quot;)}'&quot;), If(Cfg(&quot;OrchestratorQueueFolder&quot;) = &quot;Lyrebird&quot;, Nothing, $&quot;OrchestratorQueueFolder='{Cfg(&quot;OrchestratorQueueFolder&quot;)}'&quot;), If(Cfg(&quot;MaxRetryNumber&quot;) = &quot;0&quot;, Nothing, $&quot;MaxRetryNumber='{Cfg(&quot;MaxRetryNumber&quot;)}' (must be 0: Orchestrator retries)&quot;), If(Cfg(&quot;ShouldMarkJobAsFaulted&quot;).Equals(&quot;True&quot;, StringComparison.OrdinalIgnoreCase), Nothing, $&quot;ShouldMarkJobAsFaulted='{Cfg(&quot;ShouldMarkJobAsFaulted&quot;)}'&quot;), If(IsNumeric(Cfg(&quot;MaxConsecutiveSystemExceptions&quot;)) AndAlso CInt(Cfg(&quot;MaxConsecutiveSystemExceptions&quot;)) &gt;= 3, Nothing, $&quot;MaxConsecutiveSystemExceptions='{Cfg(&quot;MaxConsecutiveSystemExceptions&quot;)}' (needs &gt;= 3: one item can fail 3 times)&quot;), If(Config IsNot Nothing AndAlso Config.Values.Any(Function(v) Convert.ToString(v).Contains(&quot;ProcessABC&quot;)), &quot;template placeholder ProcessABC still present&quot;, Nothing), If(Config IsNot Nothing AndAlso Config.ContainsKey(&quot;ExScreenshotsFolderPath&quot;), &quot;ExScreenshotsFolderPath still configured (no screenshots in this process)&quot;, Nothing), If(TestMode, &quot;the configured queues resolve to TEST mode&quot;, Nothing), If(LoadQuery.Contains(&quot;message.not.like.LYREBIRD_IT*&quot;), Nothing, $&quot;production load query does not exclude test rows: {LoadQuery}&quot;)}.Where(Function(p) p IsNot Nothing).ToList()]" />
+      <ui:LogMessage DisplayName="Log result" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Config: input '{Cfg(&quot;OrchestratorQueueName&quot;)}', output '{Cfg(&quot;WishlistQueueName&quot;)}', folder '{Cfg(&quot;OrchestratorQueueFolder&quot;)}', production load query '{LoadQuery}'. {Problems.Count} problem(s){If(Problems.Count = 0, String.Empty, &quot;: &quot; &amp; String.Join(&quot;; &quot;, Problems))}.&quot;]" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify the Lyrebird production configuration" Expression="[Config IsNot Nothing AndAlso Problems.Count = 0]" sap2010:WorkflowViewState.IdRef="VerifyExpression_1" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
     </Sequence>
   </Sequence>
 </Activity>

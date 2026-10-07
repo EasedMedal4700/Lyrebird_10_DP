@@ -153,7 +153,7 @@
                 </Sequence>
               </If.Then>
             </If>
-            <ui:LogMessage DisplayName="Log User-Agent" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Trace" Message="[$&quot;MusicBrainz User-Agent: {UserAgent}&quot;]" />
+            <ui:LogMessage DisplayName="Log User-Agent" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Trace" Message="[$&quot;MusicBrainz User-Agent set: app '{UserAgent.Split(&quot;(&quot;c)(0).Trim()}', contact {If(UserAgent.Contains(&quot;(&quot;), &quot;included (not logged)&quot;, &quot;missing&quot;)}.&quot;]" />
           </Sequence>
           <Sequence DisplayName="Build search request" sap2010:WorkflowViewState.IdRef="Sequence_7">
             <Assign x:TypeArguments="s:Func(x:String, x:String)" sap2010:Annotation.AnnotationText="Lower case, strip accents, '&amp;' becomes 'and', punctuation becomes spaces, leading 'the ' removed." DisplayName="Assign Normalize" sap2010:WorkflowViewState.IdRef="Assign_13" To="[Normalize]" Value="[Function(s As String) Regex.Replace(Regex.Replace(Regex.Replace(If(s, String.Empty).Normalize(NormalizationForm.FormD), &quot;\p{Mn}&quot;, String.Empty).ToLowerInvariant().Replace(&quot;&amp;&quot;, &quot; and &quot;), &quot;[^\p{L}\p{N}]+&quot;, &quot; &quot;).Trim(), &quot;^the &quot;, String.Empty)]" />
