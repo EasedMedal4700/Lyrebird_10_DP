@@ -1,0 +1,247 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_HandleExhaustedValidateItem" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="The Lyrebird_Validate item whose LAST attempt just failed with a system exception (no Orchestrator retry follows)." Name="in_TransactionItem" Type="InArgument(ui:QueueItem)" />
+    <x:Property sap2010:Annotation.AnnotationText="Output queue (Lyrebird_Wishlist, or an _IT copy)." Name="in_WishlistQueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the output queue." Name="in_QueueFolder" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Message of the system exception of the last attempt (stored in the row message when the row is set to failed)." Name="in_FailureMessage" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="no_action | recovered_queued | released_failed | left_for_review" Name="out_Action" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="What was decided, for the log." Name="out_Message" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Private.Uri</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Runs ONLY after the last attempt of a Lyrebird_Validate item failed with a system exception (Orchestrator will not retry it). Reconciles the wishlist row with the Lyrebird_Wishlist queue instead of leaving it 'new' forever:&#xA;- row no longer 'new' for this submission, or another Reference -&gt; no_action;&#xA;- a Lyrebird_Wishlist item with this Reference exists (an attempt enqueued): the album is already queued for download, so the reservation is KEPT and the row is finished from the item (status queued) when the item was made for the current input; otherwise left_for_review (nothing written);&#xA;- no item (checked with a wait for Orchestrator's listing delay): nothing was queued, so the reservation is released and the row becomes 'failed' with a TECHNICAL: message (resubmit to try again).&#xA;Every write is guarded by status=new, submission and the row version. Never throws for data reasons; the caller still rethrows the original exception." DisplayName="Handle Exhausted Validate Item" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:Boolean" Name="IsValid" />
+      <Variable x:TypeArguments="x:String" Name="InvalidReason" />
+      <Variable x:TypeArguments="x:Int64" Name="WishlistId" />
+      <Variable x:TypeArguments="x:Int32" Name="Submission" />
+      <Variable x:TypeArguments="x:String" Name="Reference" />
+      <Variable x:TypeArguments="njl:JArray" Name="Rows" />
+      <Variable x:TypeArguments="njl:JToken" Name="Row" />
+      <Variable x:TypeArguments="x:String" Name="Action" />
+      <Variable x:TypeArguments="x:String" Name="Reason" />
+      <Variable x:TypeArguments="x:String" Name="RowVersion" />
+      <Variable x:TypeArguments="x:Boolean" Name="HasReleaseIdColumn" />
+      <Variable x:TypeArguments="x:Boolean" Name="HasArtistIdColumn" />
+      <Variable x:TypeArguments="x:Boolean" Name="HasReservationColumn" />
+      <Variable x:TypeArguments="x:String" Name="ReservedReleaseGroup" />
+      <Variable x:TypeArguments="x:Boolean" Name="ItemFound" />
+      <Variable x:TypeArguments="scg:Dictionary(x:String, x:Object)" Name="ItemContent" />
+      <Variable x:TypeArguments="x:String" Name="ItemStatus" />
+      <Variable x:TypeArguments="x:Int32" Name="ItemCount" />
+      <Variable x:TypeArguments="x:String" Name="PatchBody" />
+      <Variable x:TypeArguments="njl:JArray" Name="UpdatedRows" />
+      <Variable x:TypeArguments="x:String" Name="Guard" />
+      <Variable x:TypeArguments="x:Int32" Name="Attempts" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Action (default)" sap2010:WorkflowViewState.IdRef="Assign_1" To="[out_Action]" Value="no_action" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (default)" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_Message]" Value="[String.Empty]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Reference" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Reference]" Value="[If(in_TransactionItem Is Nothing, String.Empty, If(in_TransactionItem.Reference, String.Empty).Trim())]" />
+    <Assign x:TypeArguments="x:Int32" DisplayName="Assign Attempts" sap2010:WorkflowViewState.IdRef="Assign_4" To="[Attempts]" Value="[If(in_TransactionItem Is Nothing, 1, in_TransactionItem.RetryNo + 1)]" />
+    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke ParseValidatePayload" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Wishlist\ParseValidatePayload.xaml">
+      <ui:InvokeWorkflowFile.Arguments>
+        <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="in_SpecificContent">[If(in_TransactionItem Is Nothing, Nothing, in_TransactionItem.SpecificContent)]</InArgument>
+        <InArgument x:TypeArguments="x:String" x:Key="in_Reference">[Reference]</InArgument>
+        <OutArgument x:TypeArguments="x:Boolean" x:Key="out_IsValid">[IsValid]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_InvalidReason">[InvalidReason]</OutArgument>
+        <OutArgument x:TypeArguments="x:Int64" x:Key="out_WishlistId">[WishlistId]</OutArgument>
+        <OutArgument x:TypeArguments="x:Int32" x:Key="out_Submission">[Submission]</OutArgument>
+      </ui:InvokeWorkflowFile.Arguments>
+    </ui:InvokeWorkflowFile>
+    <If Condition="[Not IsValid]" DisplayName="If the payload is invalid" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (invalid payload)" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_Message]" Value="[$&quot;invalid payload, nothing to reconcile: {InvalidReason}&quot;]" />
+      </If.Then>
+      <If.Else>
+        <Sequence DisplayName="Reconcile row and queue" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows wishlist row (+ row version)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*,row_version:updated_at::text&amp;id=eq.{WishlistId}"]</InArgument>
+              <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[Rows]</OutArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <Assign x:TypeArguments="njl:JToken" DisplayName="Assign Row" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Row]" Value="[If(Rows Is Nothing OrElse Rows.Count = 0, Nothing, Rows(0))]" />
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke DecideRowAction" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_3" UnSafe="False" WorkflowFileName="Workflows\Wishlist\DecideRowAction.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="x:Int64" x:Key="in_WishlistId">[WishlistId]</InArgument>
+              <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[Submission]</InArgument>
+              <InArgument x:TypeArguments="njl:JToken" x:Key="in_Row">[Row]</InArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_Action">[Action]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_Reason">[Reason]</OutArgument>
+              <OutArgument x:TypeArguments="x:Boolean" x:Key="out_HasReleaseIdColumn">[HasReleaseIdColumn]</OutArgument>
+              <OutArgument x:TypeArguments="x:Boolean" x:Key="out_HasArtistIdColumn">[HasArtistIdColumn]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_RowVersion">[RowVersion]</OutArgument>
+              <OutArgument x:TypeArguments="x:Boolean" x:Key="out_HasReservationColumn">[HasReservationColumn]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_ReservedReleaseGroup">[ReservedReleaseGroup]</OutArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <If Condition="[Action &lt;&gt; &quot;process&quot; OrElse String.IsNullOrWhiteSpace(RowVersion) OrElse Not String.Equals(If(Row.Value(Of String)(&quot;queue_reference&quot;), String.Empty), Reference, StringComparison.Ordinal)]" DisplayName="If the row is not open for this Reference" sap2010:WorkflowViewState.IdRef="If_2">
+            <If.Then>
+              <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (nothing open)" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_Message]" Value="[$&quot;row is not open for this Reference ({Action}: {Reason}); nothing to reconcile.&quot;]" />
+            </If.Then>
+            <If.Else>
+              <Sequence DisplayName="Open row: check the output queue" sap2010:WorkflowViewState.IdRef="Sequence_3">
+                <Assign x:TypeArguments="x:String" DisplayName="Assign Guard" sap2010:WorkflowViewState.IdRef="Assign_8" To="[Guard]" Value="[$&quot;id=eq.{WishlistId}&amp;status=eq.new&amp;submission=eq.{Submission}&amp;updated_at=eq.{Uri.EscapeDataString(RowVersion)}&amp;select=id,status&quot;]" />
+                <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" sap2010:Annotation.AnnotationText="Waits for Orchestrator's listing delay: an item added by an earlier attempt must not be missed before a reservation is released." DisplayName="Invoke FindQueueItemByReference (output queue, wait)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_4" UnSafe="False" WorkflowFileName="Workflows\Orchestrator\FindQueueItemByReference.xaml">
+                  <ui:InvokeWorkflowFile.Arguments>
+                    <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_WishlistQueueName]</InArgument>
+                    <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+                    <InArgument x:TypeArguments="x:String" x:Key="in_Reference">[Reference]</InArgument>
+                    <InArgument x:TypeArguments="x:Int32" x:Key="in_WaitUntilFoundSeconds">[If(String.IsNullOrEmpty(ReservedReleaseGroup), 0, 30)]</InArgument>
+                    <OutArgument x:TypeArguments="x:Boolean" x:Key="out_Found">[ItemFound]</OutArgument>
+                    <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_SpecificContent">[ItemContent]</OutArgument>
+                    <OutArgument x:TypeArguments="x:String" x:Key="out_Status">[ItemStatus]</OutArgument>
+                    <OutArgument x:TypeArguments="x:Int32" x:Key="out_Count">[ItemCount]</OutArgument>
+                  </ui:InvokeWorkflowFile.Arguments>
+                </ui:InvokeWorkflowFile>
+                <If Condition="[ItemFound]" DisplayName="If the album was already queued for download" sap2010:WorkflowViewState.IdRef="If_3">
+                  <If.Then>
+                    <TryCatch DisplayName="Try finish the row from the existing item" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+                      <TryCatch.Variables>
+                        <Variable x:TypeArguments="x:String" Name="MbArtist" />
+                        <Variable x:TypeArguments="x:String" Name="MbAlbum" />
+                        <Variable x:TypeArguments="x:String" Name="ArtistMbid" />
+                        <Variable x:TypeArguments="x:String" Name="ReleaseGroupMbid" />
+                        <Variable x:TypeArguments="x:String" Name="ReleaseId" />
+                        <Variable x:TypeArguments="x:Int32" Name="TrackCount" />
+                        <Variable x:TypeArguments="x:String" Name="ReleaseReason" />
+                        <Variable x:TypeArguments="x:String" Name="Outcome" />
+                        <Variable x:TypeArguments="x:String" Name="DbStatus" />
+                        <Variable x:TypeArguments="x:String" Name="ResultMessage" />
+                        <Variable x:TypeArguments="x:Boolean" Name="DiscardBool" />
+                        <Variable x:TypeArguments="x:String" Name="DiscardString" />
+                        <Variable x:TypeArguments="scg:Dictionary(x:String, x:Object)" Name="DiscardDictionary" />
+                      </TryCatch.Variables>
+                      <TryCatch.Try>
+                        <Sequence DisplayName="Finish from item (reservation kept)" sap2010:WorkflowViewState.IdRef="Sequence_4">
+                          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke ReadExistingWishlistItem" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_5" UnSafe="False" WorkflowFileName="Workflows\Wishlist\ReadExistingWishlistItem.xaml">
+                            <ui:InvokeWorkflowFile.Arguments>
+                              <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="in_Content">[ItemContent]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_ItemStatus">[ItemStatus]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_Reference">[Reference]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_WishlistQueueName]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_Artist">[If(Row.Value(Of String)("artist"), String.Empty).Trim()]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_Album">[If(Row.Value(Of String)("album"), String.Empty).Trim()]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_PreferredFormat">[If(Row.Value(Of String)("preferred_format"), String.Empty).Trim().ToUpperInvariant()]</InArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_MbArtist">[MbArtist]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_MbAlbum">[MbAlbum]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_ArtistMbid">[ArtistMbid]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_ReleaseGroupMbid">[ReleaseGroupMbid]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_ReleaseId">[ReleaseId]</OutArgument>
+                              <OutArgument x:TypeArguments="x:Int32" x:Key="out_TrackCount">[TrackCount]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_ReleaseReason">[ReleaseReason]</OutArgument>
+                            </ui:InvokeWorkflowFile.Arguments>
+                          </ui:InvokeWorkflowFile>
+                          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildValidationResult (from existing item)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_6" UnSafe="False" WorkflowFileName="Workflows\Wishlist\BuildValidationResult.xaml">
+                            <ui:InvokeWorkflowFile.Arguments>
+                              <InArgument x:TypeArguments="x:Int64" x:Key="in_WishlistId">[WishlistId]</InArgument>
+                              <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[Submission]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_PreferredFormat">[If(Row.Value(Of String)("preferred_format"), String.Empty).Trim().ToUpperInvariant()]</InArgument>
+                              <InArgument x:TypeArguments="njl:JObject" x:Key="in_Validation">[New JObject(New JProperty("validateStatus", "validated"), New JProperty("validateMessage", $"Finished after {Attempts} failed attempt(s) from the existing {in_WishlistQueueName} item."), New JProperty("mbArtist", If(MbArtist, String.Empty)), New JProperty("mbAlbum", If(MbAlbum, String.Empty)), New JProperty("artistMbid", If(ArtistMbid, String.Empty)), New JProperty("releaseGroupMbid", If(ReleaseGroupMbid, String.Empty)), New JProperty("score", -1), New JProperty("releaseId", If(ReleaseId, String.Empty)), New JProperty("trackCount", TrackCount), New JProperty("releaseAmbiguous", False), New JProperty("releaseReason", If(ReleaseReason, String.Empty)), New JProperty("duplicateOf", 0L), New JProperty("alreadyEnqueued", True), New JProperty("requestArtist", If(Row.Value(Of String)("artist"), String.Empty).Trim()), New JProperty("requestAlbum", If(Row.Value(Of String)("album"), String.Empty).Trim()), New JProperty("requestPreferredFormat", If(Row.Value(Of String)("preferred_format"), String.Empty).Trim().ToUpperInvariant()), New JProperty("queueReference", Reference))]</InArgument>
+                              <InArgument x:TypeArguments="x:Boolean" x:Key="in_HasReleaseIdColumn">[HasReleaseIdColumn]</InArgument>
+                              <InArgument x:TypeArguments="x:Boolean" x:Key="in_HasArtistIdColumn">[HasArtistIdColumn]</InArgument>
+                              <InArgument x:TypeArguments="x:Boolean" x:Key="in_HasReservationColumn">[HasReservationColumn]</InArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_Outcome">[Outcome]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_DbStatus">[DbStatus]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[ResultMessage]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_PatchBody">[PatchBody]</OutArgument>
+                              <OutArgument x:TypeArguments="x:Boolean" x:Key="out_Enqueue">[DiscardBool]</OutArgument>
+                              <OutArgument x:TypeArguments="x:String" x:Key="out_Reference">[DiscardString]</OutArgument>
+                              <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_QueueItemInformation">[DiscardDictionary]</OutArgument>
+                            </ui:InvokeWorkflowFile.Arguments>
+                          </ui:InvokeWorkflowFile>
+                          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke UpdateRows (guarded, finish from item)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_7" UnSafe="False" WorkflowFileName="Workflows\Supabase\UpdateRows.xaml">
+                            <ui:InvokeWorkflowFile.Arguments>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_Filter">[Guard]</InArgument>
+                              <InArgument x:TypeArguments="x:String" x:Key="in_JsonBody">[PatchBody]</InArgument>
+                              <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[UpdatedRows]</OutArgument>
+                            </ui:InvokeWorkflowFile.Arguments>
+                          </ui:InvokeWorkflowFile>
+                          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Action (finish from item)" sap2010:WorkflowViewState.IdRef="Assign_9" To="[out_Action]" Value="[If(UpdatedRows IsNot Nothing AndAlso UpdatedRows.Count = 1, If(Outcome = &quot;queued&quot;, &quot;recovered_queued&quot;, &quot;recovered_&quot; &amp; Outcome), &quot;left_for_review&quot;)]" />
+                          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (finish from item)" sap2010:WorkflowViewState.IdRef="Assign_10" To="[out_Message]" Value="[If(out_Action = &quot;left_for_review&quot;, $&quot;{in_WishlistQueueName} item exists ({ItemStatus}) but the row changed meanwhile; nothing written, reservation untouched.&quot;, $&quot;{in_WishlistQueueName} item exists ({ItemStatus}): row finished as '{DbStatus}' from the item, reservation kept.&quot;)]" />
+                        </Sequence>
+                      </TryCatch.Try>
+                      <TryCatch.Catches>
+                        <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+                          <ActivityAction x:TypeArguments="s:Exception">
+                            <ActivityAction.Argument>
+                              <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+                            </ActivityAction.Argument>
+                            <Sequence DisplayName="Leave for review" sap2010:WorkflowViewState.IdRef="Sequence_5">
+                              <Assign x:TypeArguments="x:String" DisplayName="Assign out_Action (review)" sap2010:WorkflowViewState.IdRef="Assign_11" To="[out_Action]" Value="left_for_review" />
+                              <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (review)" sap2010:WorkflowViewState.IdRef="Assign_12" To="[out_Message]" Value="[$&quot;{in_WishlistQueueName} item exists ({ItemStatus}); could not finish the row ({exception.GetType().Name}: {exception.Message}). Nothing written, reservation untouched.&quot;]" />
+                            </Sequence>
+                          </ActivityAction>
+                        </Catch>
+                      </TryCatch.Catches>
+                    </TryCatch>
+                  </If.Then>
+                  <If.Else>
+                    <Sequence DisplayName="Nothing queued: release and fail the row" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign PatchBody (failed)" sap2010:WorkflowViewState.IdRef="Assign_13" To="[PatchBody]" Value="[New JObject(New JProperty(&quot;status&quot;, &quot;failed&quot;), New JProperty(&quot;message&quot;, Left($&quot;TECHNICAL: validation failed {Attempts} time(s), last error: {If(in_FailureMessage, String.Empty)} Nothing was queued. Resubmit (submission + 1) to try again.&quot;, 1000)), New JProperty(&quot;reserved_release_group&quot;, JValue.CreateNull())).ToString(Newtonsoft.Json.Formatting.None)]" />
+                      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke UpdateRows (guarded, failed + release)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_8" UnSafe="False" WorkflowFileName="Workflows\Supabase\UpdateRows.xaml">
+                        <ui:InvokeWorkflowFile.Arguments>
+                          <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+                          <InArgument x:TypeArguments="x:String" x:Key="in_Filter">[Guard]</InArgument>
+                          <InArgument x:TypeArguments="x:String" x:Key="in_JsonBody">[PatchBody]</InArgument>
+                          <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[UpdatedRows]</OutArgument>
+                        </ui:InvokeWorkflowFile.Arguments>
+                      </ui:InvokeWorkflowFile>
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Action (failed)" sap2010:WorkflowViewState.IdRef="Assign_14" To="[out_Action]" Value="[If(UpdatedRows IsNot Nothing AndAlso UpdatedRows.Count = 1, &quot;released_failed&quot;, &quot;left_for_review&quot;)]" />
+                      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (failed)" sap2010:WorkflowViewState.IdRef="Assign_15" To="[out_Message]" Value="[If(out_Action = &quot;released_failed&quot;, $&quot;no {in_WishlistQueueName} item: row set to failed (TECHNICAL), reservation {If(String.IsNullOrEmpty(ReservedReleaseGroup), &quot;none&quot;, &quot;released&quot;)}.&quot;, &quot;row changed meanwhile; nothing written.&quot;)]" />
+                    </Sequence>
+                  </If.Else>
+                </If>
+              </Sequence>
+            </If.Else>
+          </If>
+        </Sequence>
+      </If.Else>
+    </If>
+    <ui:LogMessage DisplayName="Log reconciliation" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="[If(out_Action = &quot;left_for_review&quot;, UiPath.Core.Activities.LogLevel.Error, UiPath.Core.Activities.LogLevel.Warn)]" Message="[$&quot;Exhausted retries for {Reference}: {out_Action} - {out_Message}&quot;]" />
+  </Sequence>
+</Activity>

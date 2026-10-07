@@ -45,13 +45,6 @@
     "fileInfoCollection": [
       {
         "editingStatus": "InProgress",
-        "testCaseId": "66c0fed5-bff3-4665-89c2-f1319b46bd76",
-        "testCaseType": "TestCase",
-        "executionTemplateType": "Local",
-        "fileName": "Tests\\GetTransactionDataTestCase.xaml"
-      },
-      {
-        "editingStatus": "InProgress",
         "testCaseId": "d012f1a9-2d99-41d6-a4df-103250ee6476",
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
@@ -63,20 +56,6 @@
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
         "fileName": "Tests\\InitAllSettingsTestCase.xaml"
-      },
-      {
-        "editingStatus": "InProgress",
-        "testCaseId": "d11cbfbc-0355-4881-8d14-9ec8b327d0f0",
-        "testCaseType": "TestCase",
-        "executionTemplateType": "Local",
-        "fileName": "Tests\\MainTestCase.xaml"
-      },
-      {
-        "editingStatus": "InProgress",
-        "testCaseId": "875a3d57-3072-49e2-94f3-ea0639339097",
-        "testCaseType": "TestCase",
-        "executionTemplateType": "Local",
-        "fileName": "Tests\\ProcessTestCase.xaml"
       },
       {
         "editingStatus": "InProgress",
@@ -160,21 +139,28 @@
         "testCaseId": "56928086-6f00-4daf-bdb2-645cd5a375df",
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
-        "fileName": "TestsBuildQueueReferenceTestCase.xaml"
+        "fileName": "Tests\\BuildQueueReferenceTestCase.xaml"
       },
       {
         "editingStatus": "InProgress",
         "testCaseId": "91788e57-a008-4a7b-9fc3-de9f42780be9",
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
-        "fileName": "TestsQueueReferenceIntegrationTestCase.xaml"
+        "fileName": "Tests\\QueueReferenceIntegrationTestCase.xaml"
       },
       {
         "editingStatus": "InProgress",
         "testCaseId": "de6253a4-65dd-4b08-868b-7968e3407636",
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
-        "fileName": "TestsQueueReferenceLookupIntegrationTestCase.xaml"
+        "fileName": "Tests\\QueueReferenceLookupIntegrationTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "8e791b8a-2a7f-49ba-9fc8-fb4508b40966",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\BuildRunSettingsTestCase.xaml"
       }
     ],
     "saveToCloud": false

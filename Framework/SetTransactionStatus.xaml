@@ -10,6 +10,8 @@
     <x:Property sap2010:Annotation.AnnotationText="Used to control the number of attempts of retrying the transaction processing in case of system exceptions." Name="io_RetryNumber" Type="InOutArgument(x:Int32)" />
     <x:Property sap2010:Annotation.AnnotationText="Sequential counter of transaction items." Name="io_TransactionNumber" Type="InOutArgument(x:Int32)" />
     <x:Property sap2010:Annotation.AnnotationText="Used to control the number of consecutive system exceptions." Name="io_ConsecutiveSystemExceptions" Type="InOutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird: performer outcome of a successful transaction, stored as transaction output 'Outcome'." Name="in_TransactionOutcome" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird: performer message of a successful transaction, stored as transaction output 'Message' (max 1000 characters)." Name="in_TransactionMessage" Type="InArgument(x:String)" />
   </x:Members>
   <VisualBasic.Settings>
     <x:Null />
@@ -167,7 +169,10 @@
                                   <InArgument x:TypeArguments="x:String" />
                                 </ui:SetTransactionStatus.Details>
                                 <ui:SetTransactionStatus.Output>
-                                  <scg:Dictionary x:TypeArguments="x:String, InArgument" />
+                                  <scg:Dictionary x:TypeArguments="x:String, InArgument">
+                                    <InArgument x:TypeArguments="x:String" x:Key="Outcome">[If(in_TransactionOutcome, String.Empty)]</InArgument>
+                                    <InArgument x:TypeArguments="x:String" x:Key="Message">[Left(If(in_TransactionMessage, String.Empty), 1000)]</InArgument>
+                                  </scg:Dictionary>
                                 </ui:SetTransactionStatus.Output>
                                 <ui:SetTransactionStatus.Reason>
                                   <InArgument x:TypeArguments="x:String" />

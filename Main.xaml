@@ -1,7 +1,12 @@
-<Activity mc:Ignorable="sap sap2010" x:Class="Main" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:av="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib" xmlns:sd="clr-namespace:System.Data;assembly=System.Data.Common" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sap sap2010" x:Class="Main" this:Main.in_LoadWishlist="True" this:Main.in_MaxTransactions="0" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:this="clr-namespace:" xmlns:av="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:sco="clr-namespace:System.Collections.ObjectModel;assembly=System.Private.CoreLib" xmlns:sd="clr-namespace:System.Data;assembly=System.Data.Common" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <x:Members>
     <x:Property sap2010:Annotation.AnnotationText="Allows the Orchestrator queue name to be passed as an argument, instead of only being defined in the configuration file." Name="in_OrchestratorQueueName" Type="InArgument(x:String)" />
     <x:Property sap2010:Annotation.AnnotationText="Allows the Orchestrator folder name where the queue is created to be passed as an argument, instead of only being defined in the configuration file." Name="in_OrchestratorQueueFolder" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird: output queue for validated albums. Empty = Config WishlistQueueName (Lyrebird_Wishlist). With an _IT input queue this must be an _IT queue." Name="in_WishlistQueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird: load new wishlist rows into the input queue once at job start. Default True." Name="in_LoadWishlist" Type="InArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird: optional extra filter for the startup load, e.g. id=in.(40,41). Only id, artist, album, preferred_format, submission conditions." Name="in_LoadFilter" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird: stop after this many transactions (0 = no limit). Stops between transactions like an Orchestrator stop request." Name="in_MaxTransactions" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird TEST ONLY: performer failure injection (after_reservation | after_enqueue). Refused unless both queues end with _IT." Name="in_TestFailAfterStep" Type="InArgument(x:String)" />
   </x:Members>
   <VisualBasic.Settings>
     <x:Null />
@@ -103,7 +108,7 @@
       <AssemblyReference>WindowsFormsIntegration</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
-  <StateMachine InitialState="{x:Reference __ReferenceID3}" sap2010:Annotation.AnnotationText="[Process title]&#xA;[Process description]&#xA;[Additional information (e.g., author, contact information and applications involved and required external setup)]" DisplayName="General Business Process" sap:VirtualizedContainerService.HintSize="1597,776" sap2010:WorkflowViewState.IdRef="StateMachine_1">
+  <StateMachine InitialState="{x:Reference __ReferenceID3}" sap2010:Annotation.AnnotationText="Lyrebird_10_DP - validate wishlist albums (REFramework, Orchestrator queue transactions).&#xA;Initialization (Config + run safety + queue settings) -&gt; Load New Wishlist Items (once per job) -&gt; Get Transaction Data (Lyrebird_Validate) -&gt; Process (ProcessValidateQueueItem) -&gt; ... -&gt; End Process.&#xA;Contract and run instructions: Documentation/Lyrebird_DataContract.md (section 13)." DisplayName="Lyrebird_10_DP Validate" sap:VirtualizedContainerService.HintSize="1597,776" sap2010:WorkflowViewState.IdRef="StateMachine_1">
     <sap:WorkflowViewStateService.ViewState>
       <scg:Dictionary x:TypeArguments="x:String, x:Object">
         <x:Boolean x:Key="IsExpanded">True</x:Boolean>
@@ -283,10 +288,29 @@
                           <InArgument x:TypeArguments="ui:BusinessRuleException">[Nothing]</InArgument>
                         </Assign.Value>
                       </Assign>
+                      <Assign DisplayName="Assign TransactionOutcome (reset)" sap2010:WorkflowViewState.IdRef="Assign_97">
+                        <Assign.To>
+                          <OutArgument x:TypeArguments="x:String">[TransactionOutcome]</OutArgument>
+                        </Assign.To>
+                        <Assign.Value>
+                          <InArgument x:TypeArguments="x:String">[String.Empty]</InArgument>
+                        </Assign.Value>
+                      </Assign>
+                      <Assign DisplayName="Assign TransactionMessage (reset)" sap2010:WorkflowViewState.IdRef="Assign_98">
+                        <Assign.To>
+                          <OutArgument x:TypeArguments="x:String">[TransactionMessage]</OutArgument>
+                        </Assign.To>
+                        <Assign.Value>
+                          <InArgument x:TypeArguments="x:String">[String.Empty]</InArgument>
+                        </Assign.Value>
+                      </Assign>
                       <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke Process workflow" sap:VirtualizedContainerService.HintSize="451.2,206.4" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_24" UnSafe="False" WorkflowFileName="Framework\Process.xaml">
                         <ui:InvokeWorkflowFile.Arguments>
                           <InArgument x:TypeArguments="ui:QueueItem" x:Key="in_TransactionItem">[TransactionItem]</InArgument>
                           <InArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="in_Config">[Config]</InArgument>
+                          <InOutArgument x:TypeArguments="s:DateTime" x:Key="io_LastRequestUtc">[LastRequestUtc]</InOutArgument>
+                          <OutArgument x:TypeArguments="x:String" x:Key="out_Outcome">[TransactionOutcome]</OutArgument>
+                          <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[TransactionMessage]</OutArgument>
                         </ui:InvokeWorkflowFile.Arguments>
                       </ui:InvokeWorkflowFile>
                       <TryCatch DisplayName="Try Catch Set Transaction Status (Success)" sap:VirtualizedContainerService.HintSize="451.2,464" sap2010:WorkflowViewState.IdRef="TryCatch_10">
@@ -309,6 +333,8 @@
                                 <InOutArgument x:TypeArguments="x:Int32" x:Key="io_RetryNumber">[RetryNumber]</InOutArgument>
                                 <InOutArgument x:TypeArguments="x:Int32" x:Key="io_TransactionNumber">[TransactionNumber]</InOutArgument>
                                 <InOutArgument x:TypeArguments="x:Int32" x:Key="io_ConsecutiveSystemExceptions">[ConsecutiveSystemExceptions]</InOutArgument>
+                                <InArgument x:TypeArguments="x:String" x:Key="in_TransactionOutcome">[TransactionOutcome]</InArgument>
+                                <InArgument x:TypeArguments="x:String" x:Key="in_TransactionMessage">[TransactionMessage]</InArgument>
                               </ui:InvokeWorkflowFile.Arguments>
                               <sap:WorkflowViewStateService.ViewState>
                                 <scg:Dictionary x:TypeArguments="x:String, x:Object">
@@ -374,6 +400,14 @@
                               <x:Boolean x:Key="IsPinned">False</x:Boolean>
                             </scg:Dictionary>
                           </sap:WorkflowViewStateService.ViewState>
+                          <Assign sap2010:Annotation.AnnotationText="The failed attempt may have just called MusicBrainz; its last request time is lost with the exception, so assume now (keeps the 1.1 s spacing)." DisplayName="Assign LastRequestUtc (after business exception)" sap2010:WorkflowViewState.IdRef="Assign_99">
+                            <Assign.To>
+                              <OutArgument x:TypeArguments="s:DateTime">[LastRequestUtc]</OutArgument>
+                            </Assign.To>
+                            <Assign.Value>
+                              <InArgument x:TypeArguments="s:DateTime">[DateTime.UtcNow]</InArgument>
+                            </Assign.Value>
+                          </Assign>
                           <Assign DisplayName="Set transaction status to BusinessRuleException" sap:VirtualizedContainerService.HintSize="451.2,113.6" sap2010:WorkflowViewState.IdRef="Assign_26">
                             <Assign.To>
                               <OutArgument x:TypeArguments="ui:BusinessRuleException">[BusinessException]</OutArgument>
@@ -408,6 +442,8 @@
                                     <InOutArgument x:TypeArguments="x:Int32" x:Key="io_RetryNumber">[RetryNumber]</InOutArgument>
                                     <InOutArgument x:TypeArguments="x:Int32" x:Key="io_TransactionNumber">[TransactionNumber]</InOutArgument>
                                     <InOutArgument x:TypeArguments="x:Int32" x:Key="io_ConsecutiveSystemExceptions">[ConsecutiveSystemExceptions]</InOutArgument>
+                                <InArgument x:TypeArguments="x:String" x:Key="in_TransactionOutcome">[String.Empty]</InArgument>
+                                <InArgument x:TypeArguments="x:String" x:Key="in_TransactionMessage">[String.Empty]</InArgument>
                                   </ui:InvokeWorkflowFile.Arguments>
                                   <sap:WorkflowViewStateService.ViewState>
                                     <scg:Dictionary x:TypeArguments="x:String, x:Object">
@@ -474,6 +510,14 @@
                               <x:Boolean x:Key="IsExpanded">True</x:Boolean>
                             </scg:Dictionary>
                           </sap:WorkflowViewStateService.ViewState>
+                          <Assign sap2010:Annotation.AnnotationText="The failed attempt may have just called MusicBrainz; its last request time is lost with the exception, so assume now (keeps the 1.1 s spacing)." DisplayName="Assign LastRequestUtc (after system exception)" sap2010:WorkflowViewState.IdRef="Assign_100">
+                            <Assign.To>
+                              <OutArgument x:TypeArguments="s:DateTime">[LastRequestUtc]</OutArgument>
+                            </Assign.To>
+                            <Assign.Value>
+                              <InArgument x:TypeArguments="s:DateTime">[DateTime.UtcNow]</InArgument>
+                            </Assign.Value>
+                          </Assign>
                           <Assign DisplayName="Set transaction status to SystemException" sap:VirtualizedContainerService.HintSize="451.2,113.6" sap2010:WorkflowViewState.IdRef="Assign_27">
                             <Assign.To>
                               <OutArgument x:TypeArguments="s:Exception">[SystemException]</OutArgument>
@@ -509,6 +553,8 @@
                                     <InOutArgument x:TypeArguments="x:Int32" x:Key="io_RetryNumber">[RetryNumber]</InOutArgument>
                                     <InOutArgument x:TypeArguments="x:Int32" x:Key="io_TransactionNumber">[TransactionNumber]</InOutArgument>
                                     <InOutArgument x:TypeArguments="x:Int32" x:Key="io_ConsecutiveSystemExceptions">[ConsecutiveSystemExceptions]</InOutArgument>
+                                <InArgument x:TypeArguments="x:String" x:Key="in_TransactionOutcome">[String.Empty]</InArgument>
+                                <InArgument x:TypeArguments="x:String" x:Key="in_TransactionMessage">[String.Empty]</InArgument>
                                   </ui:InvokeWorkflowFile.Arguments>
                                   <sap:WorkflowViewStateService.ViewState>
                                     <scg:Dictionary x:TypeArguments="x:String, x:Object">
@@ -703,6 +749,99 @@
                                         </Sequence>
                                       </If.Else>
                                     </If>
+                                    <Sequence sap2010:Annotation.AnnotationText="Lyrebird run settings (first run only). Checked BEFORE anything is loaded or processed; an unsafe combination fails initialization (job faulted).&#xA;- Output queue: argument in_WishlistQueueName or Config WishlistQueueName.&#xA;- BuildRunSettings: _IT input requires _IT output and loads only LYREBIRD_IT rows; production never loads LYREBIRD_IT rows and never writes to an _IT queue.&#xA;- GetQueueSettings: both queues must exist and enforce unique references; the input queue's real auto-retry / max-retries decide when an attempt is the last one." DisplayName="Lyrebird run settings" sap2010:WorkflowViewState.IdRef="Sequence_90">
+                                      <Sequence.Variables>
+                                        <Variable x:TypeArguments="x:Int32" Name="InputMaxRetries" />
+                                        <Variable x:TypeArguments="x:Boolean" Name="InputAutoRetry" />
+                                        <Variable x:TypeArguments="x:Boolean" Name="InputUnique" />
+                                        <Variable x:TypeArguments="x:Int32" Name="OutputMaxRetries" />
+                                        <Variable x:TypeArguments="x:Boolean" Name="OutputAutoRetry" />
+                                        <Variable x:TypeArguments="x:Boolean" Name="OutputUnique" />
+                                      </Sequence.Variables>
+                                      <If Condition="[Not String.IsNullOrWhiteSpace(in_WishlistQueueName)]" DisplayName="If in_WishlistQueueName is specified" sap2010:WorkflowViewState.IdRef="If_90">
+                                        <If.Then>
+                                          <Assign DisplayName="Assign WishlistQueueName" sap2010:WorkflowViewState.IdRef="Assign_90">
+                                            <Assign.To>
+                                              <OutArgument x:TypeArguments="x:Object">[Config("WishlistQueueName")]</OutArgument>
+                                            </Assign.To>
+                                            <Assign.Value>
+                                              <InArgument x:TypeArguments="x:Object">[in_WishlistQueueName.Trim()]</InArgument>
+                                            </Assign.Value>
+                                          </Assign>
+                                        </If.Then>
+                                      </If>
+                                      <If Condition="[Not Config.ContainsKey(&quot;WishlistQueueName&quot;) OrElse String.IsNullOrWhiteSpace(Convert.ToString(Config(&quot;OrchestratorQueueFolder&quot;)))]" DisplayName="If output queue or folder is missing" sap2010:WorkflowViewState.IdRef="If_91">
+                                        <If.Then>
+                                          <Throw DisplayName="Throw missing queue settings" Exception="[New ArgumentException(&quot;Config WishlistQueueName and OrchestratorQueueFolder (or the Main arguments) must be set.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_90" />
+                                        </If.Then>
+                                      </If>
+                                      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildRunSettings" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_90" UnSafe="False" WorkflowFileName="Workflows\Main\BuildRunSettings.xaml">
+                                        <ui:InvokeWorkflowFile.Arguments>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_ValidateQueueName">[Convert.ToString(Config("OrchestratorQueueName"))]</InArgument>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_WishlistQueueName">[Convert.ToString(Config("WishlistQueueName"))]</InArgument>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_LoadFilter">[in_LoadFilter]</InArgument>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_TestFailAfterStep">[in_TestFailAfterStep]</InArgument>
+                                          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_TestMode">[TestMode]</OutArgument>
+                                          <OutArgument x:TypeArguments="x:String" x:Key="out_LoadQuery">[LoadQuery]</OutArgument>
+                                        </ui:InvokeWorkflowFile.Arguments>
+                                      </ui:InvokeWorkflowFile>
+                                      <Assign DisplayName="Assign Config TestFailAfterStep" sap2010:WorkflowViewState.IdRef="Assign_91">
+                                        <Assign.To>
+                                          <OutArgument x:TypeArguments="x:Object">[Config("TestFailAfterStep")]</OutArgument>
+                                        </Assign.To>
+                                        <Assign.Value>
+                                          <InArgument x:TypeArguments="x:Object">[If(in_TestFailAfterStep, String.Empty).Trim().ToLowerInvariant()]</InArgument>
+                                        </Assign.Value>
+                                      </Assign>
+                                      <Assign DisplayName="Assign Config MaxTransactions" sap2010:WorkflowViewState.IdRef="Assign_92">
+                                        <Assign.To>
+                                          <OutArgument x:TypeArguments="x:Object">[Config("MaxTransactions")]</OutArgument>
+                                        </Assign.To>
+                                        <Assign.Value>
+                                          <InArgument x:TypeArguments="x:Object">[Math.Max(0, in_MaxTransactions)]</InArgument>
+                                        </Assign.Value>
+                                      </Assign>
+                                      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetQueueSettings (input queue)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_91" UnSafe="False" WorkflowFileName="Workflows\Orchestrator\GetQueueSettings.xaml">
+                                        <ui:InvokeWorkflowFile.Arguments>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[Convert.ToString(Config("OrchestratorQueueName"))]</InArgument>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[Convert.ToString(Config("OrchestratorQueueFolder"))]</InArgument>
+                                          <OutArgument x:TypeArguments="x:Int32" x:Key="out_MaxRetries">[InputMaxRetries]</OutArgument>
+                                          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_AutoRetry">[InputAutoRetry]</OutArgument>
+                                          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_EnforceUniqueReference">[InputUnique]</OutArgument>
+                                        </ui:InvokeWorkflowFile.Arguments>
+                                      </ui:InvokeWorkflowFile>
+                                      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetQueueSettings (output queue)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_92" UnSafe="False" WorkflowFileName="Workflows\Orchestrator\GetQueueSettings.xaml">
+                                        <ui:InvokeWorkflowFile.Arguments>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[Convert.ToString(Config("WishlistQueueName"))]</InArgument>
+                                          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[Convert.ToString(Config("OrchestratorQueueFolder"))]</InArgument>
+                                          <OutArgument x:TypeArguments="x:Int32" x:Key="out_MaxRetries">[OutputMaxRetries]</OutArgument>
+                                          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_AutoRetry">[OutputAutoRetry]</OutArgument>
+                                          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_EnforceUniqueReference">[OutputUnique]</OutArgument>
+                                        </ui:InvokeWorkflowFile.Arguments>
+                                      </ui:InvokeWorkflowFile>
+                                      <If Condition="[Not InputUnique OrElse Not OutputUnique]" DisplayName="If a queue does not enforce unique references" sap2010:WorkflowViewState.IdRef="If_92">
+                                        <If.Then>
+                                          <Throw DisplayName="Throw unique references required" Exception="[New ArgumentException(&quot;Both queues must enforce unique references (duplicate prevention depends on it); nothing was loaded or processed.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_91" />
+                                        </If.Then>
+                                      </If>
+                                      <Assign DisplayName="Assign Config ValidateQueueAutoRetry" sap2010:WorkflowViewState.IdRef="Assign_93">
+                                        <Assign.To>
+                                          <OutArgument x:TypeArguments="x:Object">[Config("ValidateQueueAutoRetry")]</OutArgument>
+                                        </Assign.To>
+                                        <Assign.Value>
+                                          <InArgument x:TypeArguments="x:Object">[InputAutoRetry]</InArgument>
+                                        </Assign.Value>
+                                      </Assign>
+                                      <Assign DisplayName="Assign Config ValidateQueueMaxRetries" sap2010:WorkflowViewState.IdRef="Assign_94">
+                                        <Assign.To>
+                                          <OutArgument x:TypeArguments="x:Object">[Config("ValidateQueueMaxRetries")]</OutArgument>
+                                        </Assign.To>
+                                        <Assign.Value>
+                                          <InArgument x:TypeArguments="x:Object">[InputMaxRetries]</InArgument>
+                                        </Assign.Value>
+                                      </Assign>
+                                      <ui:LogMessage DisplayName="Log run settings" sap2010:WorkflowViewState.IdRef="LogMessage_90" Level="Info" Message="[$&quot;Lyrebird run: {If(TestMode, &quot;TEST&quot;, &quot;PRODUCTION&quot;)} mode, input '{Config(&quot;OrchestratorQueueName&quot;)}' (auto retry {InputAutoRetry}, max retries {InputMaxRetries}), output '{Config(&quot;WishlistQueueName&quot;)}', folder '{Config(&quot;OrchestratorQueueFolder&quot;)}', startup load {If(in_LoadWishlist, $&quot;on ({LoadQuery})&quot;, &quot;off&quot;)}, max transactions {If(in_MaxTransactions &gt; 0, in_MaxTransactions.ToString(), &quot;unlimited&quot;)}{If(String.IsNullOrWhiteSpace(in_TestFailAfterStep), String.Empty, $&quot;, TEST failure injection {in_TestFailAfterStep}&quot;)}.&quot;]" />
+                                    </Sequence>
                                     <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" sap2010:Annotation.AnnotationText="Kills all Windows processes representing applications used in this business process to assure that the execution starts in a clean state.&#xA;Since the applications are assumed to be already closed, CloseAllApplications is skipped and just KillAllProcess is invoked." DisplayName="Invoke KillAllProcesses workflow (first run)" sap:VirtualizedContainerService.HintSize="416,316.8" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_19" UnSafe="False" WorkflowFileName="Framework\KillAllProcesses.xaml">
                                       <ui:InvokeWorkflowFile.Arguments>
                                         <scg:Dictionary x:TypeArguments="x:String, Argument" />
@@ -962,12 +1101,103 @@
                             <scg:Dictionary x:TypeArguments="x:String, x:Object">
                               <x:Int32 x:Key="SrcConnectionPointIndex">48</x:Int32>
                               <x:Int32 x:Key="DestConnectionPointIndex">29</x:Int32>
-                              <av:PointCollection x:Key="ConnectorLocation">396,176.65 426,176.65 426,259 545,259</av:PointCollection>
                               <x:Boolean x:Key="IsExpanded">True</x:Boolean>
                             </scg:Dictionary>
                           </sap:WorkflowViewStateService.ViewState>
                           <Transition.To>
-                            <x:Reference>__ReferenceID0</x:Reference>
+                            <State x:Name="__ReferenceID4" sap2010:Annotation.AnnotationText="Lyrebird: load new wishlist rows into the input queue ONCE per job, after the first successful initialization. Outside the initialization TryCatch, and skipped when Initialization runs again after a system exception, so a re-initialization never loads again. A load failure ends the job (End Process); rerunning is safe because References are unique." DisplayName="Load New Wishlist Items" sap2010:WorkflowViewState.IdRef="State_90">
+                              <State.Entry>
+                                <Sequence DisplayName="Load once per job" sap2010:WorkflowViewState.IdRef="Sequence_91">
+                                  <If Condition="[in_LoadWishlist AndAlso Not WishlistLoadAttempted]" DisplayName="If the startup load has not run in this job" sap2010:WorkflowViewState.IdRef="If_93">
+                                    <If.Then>
+                                      <Sequence DisplayName="Startup load" sap2010:WorkflowViewState.IdRef="Sequence_92">
+                                        <Sequence.Variables>
+                                          <Variable x:TypeArguments="x:Int32" Name="LoadAdded" />
+                                          <Variable x:TypeArguments="x:Int32" Name="LoadAlreadyQueued" />
+                                          <Variable x:TypeArguments="x:Int32" Name="LoadDuplicateInBatch" />
+                                          <Variable x:TypeArguments="x:Int32" Name="LoadInvalid" />
+                                          <Variable x:TypeArguments="x:Int32" Name="LoadChanged" />
+                                        </Sequence.Variables>
+                                        <Assign DisplayName="Assign WishlistLoadAttempted" sap2010:WorkflowViewState.IdRef="Assign_95">
+                                          <Assign.To>
+                                            <OutArgument x:TypeArguments="x:Boolean">[WishlistLoadAttempted]</OutArgument>
+                                          </Assign.To>
+                                          <Assign.Value>
+                                            <InArgument x:TypeArguments="x:Boolean">[True]</InArgument>
+                                          </Assign.Value>
+                                        </Assign>
+                                        <TryCatch DisplayName="Try LoadNewWishlistItems" sap2010:WorkflowViewState.IdRef="TryCatch_90">
+                                          <TryCatch.Try>
+                                            <Sequence DisplayName="Load" sap2010:WorkflowViewState.IdRef="Sequence_93">
+                                              <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke LoadNewWishlistItems" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_93" UnSafe="False" WorkflowFileName="Workflows\Wishlist\LoadNewWishlistItems.xaml">
+                                                <ui:InvokeWorkflowFile.Arguments>
+                                                  <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[Convert.ToString(Config("OrchestratorQueueName"))]</InArgument>
+                                                  <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[Convert.ToString(Config("OrchestratorQueueFolder"))]</InArgument>
+                                                  <InArgument x:TypeArguments="x:String" x:Key="in_Query">[LoadQuery]</InArgument>
+                                                  <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+                                                  <InArgument x:TypeArguments="x:Boolean" x:Key="in_PersistReferences">[True]</InArgument>
+                                                  <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[LoadAdded]</OutArgument>
+                                                  <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[LoadAlreadyQueued]</OutArgument>
+                                                  <OutArgument x:TypeArguments="x:Int32" x:Key="out_DuplicateInBatchCount">[LoadDuplicateInBatch]</OutArgument>
+                                                  <OutArgument x:TypeArguments="x:Int32" x:Key="out_InvalidCount">[LoadInvalid]</OutArgument>
+                                                  <OutArgument x:TypeArguments="x:Int32" x:Key="out_ChangedCount">[LoadChanged]</OutArgument>
+                                                </ui:InvokeWorkflowFile.Arguments>
+                                              </ui:InvokeWorkflowFile>
+                                              <ui:LogMessage DisplayName="Log startup load" sap2010:WorkflowViewState.IdRef="LogMessage_91" Level="Info" Message="[$&quot;Startup load into '{Config(&quot;OrchestratorQueueName&quot;)}': {LoadAdded} added, {LoadAlreadyQueued} already queued, {LoadDuplicateInBatch} duplicate(s) in batch, {LoadInvalid} invalid, {LoadChanged} changed while loading.&quot;]" />
+                                            </Sequence>
+                                          </TryCatch.Try>
+                                          <TryCatch.Catches>
+                                            <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_90">
+                                              <ActivityAction x:TypeArguments="s:Exception">
+                                                <ActivityAction.Argument>
+                                                  <DelegateInArgument x:TypeArguments="s:Exception" Name="loadException" />
+                                                </ActivityAction.Argument>
+                                                <Assign DisplayName="Assign SystemException (startup load)" sap2010:WorkflowViewState.IdRef="Assign_96">
+                                                  <Assign.To>
+                                                    <OutArgument x:TypeArguments="s:Exception">[SystemException]</OutArgument>
+                                                  </Assign.To>
+                                                  <Assign.Value>
+                                                    <InArgument x:TypeArguments="s:Exception">[loadException]</InArgument>
+                                                  </Assign.Value>
+                                                </Assign>
+                                              </ActivityAction>
+                                            </Catch>
+                                          </TryCatch.Catches>
+                                        </TryCatch>
+                                      </Sequence>
+                                    </If.Then>
+                                    <If.Else>
+                                      <ui:LogMessage DisplayName="Log startup load skipped" sap2010:WorkflowViewState.IdRef="LogMessage_92" Level="Info" Message="[If(in_LoadWishlist, &quot;Startup load already ran in this job (re-initialization); not loading again.&quot;, &quot;Startup load disabled (in_LoadWishlist = False).&quot;)]" />
+                                    </If.Else>
+                                  </If>
+                                </Sequence>
+                              </State.Entry>
+                              <sap:WorkflowViewStateService.ViewState>
+                                <scg:Dictionary x:TypeArguments="x:String, x:Object">
+                                  <av:Point x:Key="ShapeLocation">164,300</av:Point>
+                                  <av:Size x:Key="ShapeSize">232,110</av:Size>
+                                  <x:Boolean x:Key="IsPinned">False</x:Boolean>
+                                  <x:Boolean x:Key="IsAnnotationDocked">True</x:Boolean>
+                                </scg:Dictionary>
+                              </sap:WorkflowViewStateService.ViewState>
+                              <State.Transitions>
+                                <Transition DisplayName="Load failed" sap2010:WorkflowViewState.IdRef="Transition_90">
+                                  <Transition.To>
+                                    <x:Reference>__ReferenceID1</x:Reference>
+                                  </Transition.To>
+                                  <Transition.Action>
+                                    <ui:LogMessage DisplayName="Log startup load failure" sap2010:WorkflowViewState.IdRef="LogMessage_93" Level="Error" Message="[&quot;Startup load failed, ending the job (rerun is safe): &quot; + SystemException.Message + &quot; at Source: &quot; + SystemException.Source]" />
+                                  </Transition.Action>
+                                  <Transition.Condition>[SystemException IsNot Nothing]</Transition.Condition>
+                                </Transition>
+                                <Transition DisplayName="Loaded" sap2010:WorkflowViewState.IdRef="Transition_91">
+                                  <Transition.To>
+                                    <x:Reference>__ReferenceID0</x:Reference>
+                                  </Transition.To>
+                                  <Transition.Condition>[SystemException Is Nothing]</Transition.Condition>
+                                </Transition>
+                              </State.Transitions>
+                            </State>
                           </Transition.To>
                           <Transition.Action>
                             <ui:Comment DisplayName="Comment (default transition)" sap:VirtualizedContainerService.HintSize="348.8,76" sap2010:WorkflowViewState.IdRef="Comment_1" Text="Default transition is picked up if there are no errors during initialization" />
@@ -1039,6 +1269,7 @@
     <x:Reference>__ReferenceID2</x:Reference>
     <x:Reference>__ReferenceID1</x:Reference>
     <x:Reference>__ReferenceID3</x:Reference>
+    <x:Reference>__ReferenceID4</x:Reference>
     <StateMachine.Variables>
       <Variable x:TypeArguments="ui:QueueItem" sap2010:Annotation.AnnotationText="Transaction item to be processed. The type of this variable can be changed to match the transaction type in the process. For example, when processing data from a spreadsheet that is read into a DataTable, this type can be changed to DataRow. " Name="TransactionItem" />
       <Variable x:TypeArguments="s:Exception" sap2010:Annotation.AnnotationText="Used during transitions between states to represent exceptions other than business exceptions." Name="SystemException" />
@@ -1051,6 +1282,12 @@
       <Variable x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="Transaction ID used for information and logging purposes. Ideally, the ID should be unique for each transaction. " Name="TransactionID" />
       <Variable x:TypeArguments="sd:DataTable" sap2010:Annotation.AnnotationText="Used in case transactions are stored in a DataTable, for example, after being retrieved from a spreadsheet." Name="dt_TransactionData" />
       <Variable x:TypeArguments="x:Int32" sap2010:Annotation.AnnotationText="Used to control the number of consecutive system exceptions." Default="0" Name="ConsecutiveSystemExceptions" />
+      <Variable x:TypeArguments="s:DateTime" sap2010:Annotation.AnnotationText="Lyrebird: UTC time of the last MusicBrainz request. Kept for the whole job (across transactions and re-initialization); set to now after a failed transaction because its last request time is unknown." Default="[DateTime.MinValue]" Name="LastRequestUtc" />
+      <Variable x:TypeArguments="x:Boolean" sap2010:Annotation.AnnotationText="Lyrebird: the startup load ran in this job (never repeated by re-initialization)." Default="False" Name="WishlistLoadAttempted" />
+      <Variable x:TypeArguments="x:Boolean" sap2010:Annotation.AnnotationText="Lyrebird: True when the input queue is an _IT test queue." Default="False" Name="TestMode" />
+      <Variable x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="Lyrebird: PostgREST query of the startup load (BuildRunSettings)." Name="LoadQuery" />
+      <Variable x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="Lyrebird: performer outcome of the current transaction." Name="TransactionOutcome" />
+      <Variable x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="Lyrebird: performer message of the current transaction." Name="TransactionMessage" />
     </StateMachine.Variables>
   </StateMachine>
 </Activity>

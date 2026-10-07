@@ -1,0 +1,77 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Main_BuildRunSettings" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Input queue Main consumes (Config OrchestratorQueueName or argument in_OrchestratorQueueName)." Name="in_ValidateQueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Output queue for validated albums (Config WishlistQueueName or argument in_WishlistQueueName)." Name="in_WishlistQueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional extra PostgREST filter for the startup load, e.g. 'id=in.(40,41)'. Only conditions on id, artist, album, preferred_format or submission are accepted, so the safety filters cannot be overridden." Name="in_LoadFilter" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional test-only failure injection for the performer (after_reservation | after_enqueue). Only accepted in test mode." Name="in_TestFailAfterStep" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the input queue ends with _IT (integration test run)." Name="out_TestMode" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="PostgREST query for LoadNewWishlistItems. Test mode loads ONLY rows whose message starts with LYREBIRD_IT; production mode loads ONLY rows without that marker." Name="out_LoadQuery" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Run safety for Main.xaml. No side effects; throws ArgumentException before anything is loaded or processed.&#xA;- Test mode = the input queue ends with _IT. Then the output queue must also end with _IT, and the startup load only takes rows marked LYREBIRD_IT.&#xA;- Production mode: the output queue must NOT end with _IT, the startup load never takes LYREBIRD_IT rows, and test failure injection is refused.&#xA;- Input and output queue must be set and differ." DisplayName="Build Run Settings" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="ValidateQueue" />
+      <Variable x:TypeArguments="x:String" Name="WishlistQueue" />
+      <Variable x:TypeArguments="x:String" Name="Filter" />
+      <Variable x:TypeArguments="x:String" Name="Injection" />
+      <Variable x:TypeArguments="x:String" Default="(id|artist|album|preferred_format|submission)=[^&amp;=]+" Name="FilterPart" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="Problems" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign ValidateQueue" sap2010:WorkflowViewState.IdRef="Assign_1" To="[ValidateQueue]" Value="[If(in_ValidateQueueName, String.Empty).Trim()]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign WishlistQueue" sap2010:WorkflowViewState.IdRef="Assign_2" To="[WishlistQueue]" Value="[If(in_WishlistQueueName, String.Empty).Trim()]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Filter" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Filter]" Value="[If(in_LoadFilter, String.Empty).Trim()]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Injection" sap2010:WorkflowViewState.IdRef="Assign_4" To="[Injection]" Value="[If(in_TestFailAfterStep, String.Empty).Trim()]" />
+    <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_TestMode" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_TestMode]" Value="[ValidateQueue.EndsWith(&quot;_IT&quot;, StringComparison.OrdinalIgnoreCase)]" />
+    <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign Problems" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Problems]" Value="[{If(ValidateQueue = String.Empty, &quot;the input queue name is empty&quot;, Nothing), If(WishlistQueue = String.Empty, &quot;the output queue name is empty&quot;, Nothing), If(ValidateQueue &lt;&gt; String.Empty AndAlso String.Equals(ValidateQueue, WishlistQueue, StringComparison.OrdinalIgnoreCase), &quot;input and output queue are the same&quot;, Nothing), If(out_TestMode AndAlso WishlistQueue &lt;&gt; String.Empty AndAlso Not WishlistQueue.EndsWith(&quot;_IT&quot;, StringComparison.OrdinalIgnoreCase), $&quot;test input queue '{ValidateQueue}' requires a test output queue ending with _IT (got '{WishlistQueue}')&quot;, Nothing), If(Not out_TestMode AndAlso WishlistQueue.EndsWith(&quot;_IT&quot;, StringComparison.OrdinalIgnoreCase), $&quot;production input queue '{ValidateQueue}' must not write to test output queue '{WishlistQueue}'&quot;, Nothing), If(Injection &lt;&gt; String.Empty AndAlso Not out_TestMode, &quot;test failure injection is only allowed with _IT queues&quot;, Nothing), If(Injection = String.Empty OrElse {&quot;after_reservation&quot;, &quot;after_enqueue&quot;}.Contains(Injection.ToLowerInvariant()), Nothing, $&quot;unknown test failure injection '{Injection}'&quot;), If(Filter = String.Empty OrElse Regex.IsMatch(Filter, &quot;^&quot; &amp; FilterPart &amp; &quot;(&amp;&quot; &amp; FilterPart &amp; &quot;)*$&quot;), Nothing, $&quot;load filter '{Filter}' is not allowed (only id, artist, album, preferred_format, submission conditions)&quot;)}.Where(Function(p) p IsNot Nothing).ToList()]" />
+    <If Condition="[Problems.Count &gt; 0]" DisplayName="If the run settings are unsafe" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Throw DisplayName="Throw unsafe run settings" Exception="[New ArgumentException(&quot;Unsafe Main.xaml run settings, nothing was loaded or processed: &quot; &amp; String.Join(&quot;; &quot;, Problems) &amp; &quot;.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+      </If.Then>
+    </If>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_LoadQuery" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_LoadQuery]" Value="[&quot;select=*&amp;status=eq.new&amp;&quot; &amp; If(out_TestMode, &quot;message=like.LYREBIRD_IT*&quot;, &quot;or=(message.is.null,message.not.like.LYREBIRD_IT*)&quot;) &amp; If(Filter = String.Empty, String.Empty, &quot;&amp;&quot; &amp; Filter) &amp; &quot;&amp;order=id.asc&quot;]" />
+  </Sequence>
+</Activity>

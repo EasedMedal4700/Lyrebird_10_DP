@@ -1,0 +1,155 @@
+[
+  {
+    "name": "production defaults",
+    "input": "Lyrebird_Validate",
+    "output": "Lyrebird_Wishlist",
+    "filter": "",
+    "injection": "",
+    "expect": {
+      "testMode": false,
+      "loadQuery": "select=*&status=eq.new&or=(message.is.null,message.not.like.LYREBIRD_IT*)&order=id.asc"
+    }
+  },
+  {
+    "name": "test queues load only marked rows",
+    "input": "Lyrebird_Validate_Main_IT",
+    "output": "Lyrebird_Wishlist_Main_IT",
+    "filter": "",
+    "injection": "",
+    "expect": {
+      "testMode": true,
+      "loadQuery": "select=*&status=eq.new&message=like.LYREBIRD_IT*&order=id.asc"
+    }
+  },
+  {
+    "name": "test filter is appended",
+    "input": "Lyrebird_Validate_Main_IT",
+    "output": "Lyrebird_Wishlist_Main_IT",
+    "filter": "id=in.(40,41)",
+    "injection": "",
+    "expect": {
+      "testMode": true,
+      "loadQuery": "select=*&status=eq.new&message=like.LYREBIRD_IT*&id=in.(40,41)&order=id.asc"
+    }
+  },
+  {
+    "name": "production filter keeps the marker exclusion",
+    "input": "Lyrebird_Validate",
+    "output": "Lyrebird_Wishlist",
+    "filter": "artist=eq.Radiohead&submission=eq.1",
+    "injection": "",
+    "expect": {
+      "testMode": false,
+      "loadQuery": "select=*&status=eq.new&or=(message.is.null,message.not.like.LYREBIRD_IT*)&artist=eq.Radiohead&submission=eq.1&order=id.asc"
+    }
+  },
+  {
+    "name": "test injection allowed with _IT queues",
+    "input": "Lyrebird_Validate_Main_IT",
+    "output": "Lyrebird_Wishlist_Main_IT",
+    "filter": "",
+    "injection": "after_enqueue",
+    "expect": {
+      "testMode": true
+    }
+  },
+  {
+    "name": "test input with the regular output queue is refused",
+    "input": "Lyrebird_Validate_Main_IT",
+    "output": "Lyrebird_Wishlist",
+    "filter": "",
+    "injection": "",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "requires a test output queue"
+    }
+  },
+  {
+    "name": "production input with a test output queue is refused",
+    "input": "Lyrebird_Validate",
+    "output": "Lyrebird_Wishlist_IT",
+    "filter": "",
+    "injection": "",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "must not write to test output queue"
+    }
+  },
+  {
+    "name": "same input and output queue is refused",
+    "input": "Lyrebird_Validate",
+    "output": "lyrebird_validate",
+    "filter": "",
+    "injection": "",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "are the same"
+    }
+  },
+  {
+    "name": "empty output queue is refused",
+    "input": "Lyrebird_Validate",
+    "output": "",
+    "filter": "",
+    "injection": "",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "output queue name is empty"
+    }
+  },
+  {
+    "name": "injection in production is refused",
+    "input": "Lyrebird_Validate",
+    "output": "Lyrebird_Wishlist",
+    "filter": "",
+    "injection": "after_enqueue",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "only allowed with _IT queues"
+    }
+  },
+  {
+    "name": "unknown injection is refused",
+    "input": "Lyrebird_Validate_Main_IT",
+    "output": "Lyrebird_Wishlist_Main_IT",
+    "filter": "",
+    "injection": "before_everything",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "unknown test failure injection"
+    }
+  },
+  {
+    "name": "filter on status is refused",
+    "input": "Lyrebird_Validate_Main_IT",
+    "output": "Lyrebird_Wishlist_Main_IT",
+    "filter": "status=eq.failed",
+    "injection": "",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "is not allowed"
+    }
+  },
+  {
+    "name": "filter on message is refused",
+    "input": "Lyrebird_Validate",
+    "output": "Lyrebird_Wishlist",
+    "filter": "message=like.LYREBIRD_IT*",
+    "injection": "",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "is not allowed"
+    }
+  },
+  {
+    "name": "or-filter is refused",
+    "input": "Lyrebird_Validate",
+    "output": "Lyrebird_Wishlist",
+    "filter": "or=(id.eq.1,id.eq.2)",
+    "injection": "",
+    "expect": {
+      "exception": "ArgumentException",
+      "reasonContains": "is not allowed"
+    }
+  }
+]

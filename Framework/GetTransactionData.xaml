@@ -103,6 +103,14 @@
       </scg:Dictionary>
     </sap:WorkflowViewStateService.ViewState>
     <ui:LogMessage DisplayName="Log Message Get Transaction Item" sap:VirtualizedContainerService.HintSize="494.4,174.4" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[&quot;Get the transaction item&quot;]" />
+    <If sap2010:Annotation.AnnotationText="Optional limit (Main argument in_MaxTransactions, Config MaxTransactions; 0 = no limit): stops between transactions like an Orchestrator stop request. Used for controlled stop/restart." Condition="[in_Config.ContainsKey(&quot;MaxTransactions&quot;) AndAlso Convert.ToInt32(in_Config(&quot;MaxTransactions&quot;)) &gt; 0 AndAlso in_TransactionNumber &gt; Convert.ToInt32(in_Config(&quot;MaxTransactions&quot;))]" DisplayName="If the transaction limit is reached" sap2010:WorkflowViewState.IdRef="If_90">
+      <If.Then>
+        <Sequence DisplayName="Stop: limit reached" sap2010:WorkflowViewState.IdRef="Sequence_90">
+          <ui:LogMessage DisplayName="Log transaction limit reached" sap2010:WorkflowViewState.IdRef="LogMessage_90" Level="Info" Message="[$&quot;Transaction limit {in_Config(&quot;MaxTransactions&quot;)} reached; stopping before the next item (remaining items stay New).&quot;]" />
+          <Assign x:TypeArguments="ui:QueueItem" DisplayName="Assign out_TransactionItem (limit)" sap2010:WorkflowViewState.IdRef="Assign_90" To="[out_TransactionItem]" Value="[Nothing]" />
+        </Sequence>
+      </If.Then>
+      <If.Else>
     <ui:RetryScope LogRetriedExceptions="{x:Null}" RetriedExceptionsLogLevel="{x:Null}" DisplayName="Retry Get transaction item" sap:VirtualizedContainerService.HintSize="494.4,972" sap2010:WorkflowViewState.IdRef="RetryScope_2" NumberOfRetries="[Cint(in_Config(&quot;RetryNumberGetTransactionItem&quot;))]">
       <ui:RetryScope.ActivityBody>
         <ActivityAction>
@@ -177,6 +185,8 @@
         <ActivityFunc x:TypeArguments="x:Boolean" />
       </ui:RetryScope.Condition>
     </ui:RetryScope>
+      </If.Else>
+    </If>
     <If sap2010:Annotation.AnnotationText="This optional step can be used to include more information about a transaction item and it is used mainly for logging and visualization purposes.&#xA;For example, if transaction items are invoices, then out_TransactionID can be the invoice number, out_TransactionField1 can be the invoice date and out_TransactionField2 can be the invoice amount." Condition="[out_TransactionItem isNot Nothing]" DisplayName="If a new transaction item is retrieved, get additional information about it" sap:VirtualizedContainerService.HintSize="494.4,736" sap2010:WorkflowViewState.IdRef="If_1">
       <sap:WorkflowViewStateService.ViewState>
         <scg:Dictionary x:TypeArguments="x:String, x:Object">
@@ -196,7 +206,7 @@
               <OutArgument x:TypeArguments="x:String">[out_TransactionID]</OutArgument>
             </Assign.To>
             <Assign.Value>
-              <InArgument x:TypeArguments="x:String">[now.ToString]</InArgument>
+              <InArgument x:TypeArguments="x:String">[out_TransactionItem.Reference]</InArgument>
             </Assign.Value>
           </Assign>
           <Assign DisplayName="Assign out_TransactionField1" sap:VirtualizedContainerService.HintSize="459.2,113.6" sap2010:WorkflowViewState.IdRef="Assign_6">
@@ -204,7 +214,7 @@
               <OutArgument x:TypeArguments="x:String">[out_TransactionField1]</OutArgument>
             </Assign.To>
             <Assign.Value>
-              <InArgument x:TypeArguments="x:String">[string.Empty]</InArgument>
+              <InArgument x:TypeArguments="x:String">[If(out_TransactionItem.SpecificContent IsNot Nothing AndAlso out_TransactionItem.SpecificContent.ContainsKey("WishlistId"), Convert.ToString(out_TransactionItem.SpecificContent("WishlistId")), String.Empty)]</InArgument>
             </Assign.Value>
           </Assign>
           <Assign DisplayName="Assign out_TransactionField2" sap:VirtualizedContainerService.HintSize="459.2,104.8" sap2010:WorkflowViewState.IdRef="Assign_7">
@@ -212,7 +222,7 @@
               <OutArgument x:TypeArguments="x:String">[out_TransactionField2]</OutArgument>
             </Assign.To>
             <Assign.Value>
-              <InArgument x:TypeArguments="x:String">[string.Empty]</InArgument>
+              <InArgument x:TypeArguments="x:String">[$"attempt {out_TransactionItem.RetryNo + 1}"]</InArgument>
             </Assign.Value>
           </Assign>
         </Sequence>

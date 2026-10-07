@@ -1,95 +1,139 @@
-<Activity mc:Ignorable="sap sap2010" x:Class="Process" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sap sap2010" x:Class="Process" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <x:Members>
-    <x:Property sap2010:Annotation.AnnotationText="Transaction item to be processed." Name="in_TransactionItem" Type="InArgument(ui:QueueItem)" />
-    <x:Property sap2010:Annotation.AnnotationText="Dictionary structure to store configuration data of the process (settings, constants and assets)." Name="in_Config" Type="InArgument(scg:Dictionary(x:String, x:Object))" />
+    <x:Property sap2010:Annotation.AnnotationText="Transaction item to be processed (one Lyrebird_Validate item)." Name="in_TransactionItem" Type="InArgument(ui:QueueItem)" />
+    <x:Property sap2010:Annotation.AnnotationText="Dictionary structure to store configuration data of the process (settings, constants and assets). Main adds the run settings: WishlistQueueName, TestFailAfterStep, ValidateQueueAutoRetry, ValidateQueueMaxRetries." Name="in_Config" Type="InArgument(scg:Dictionary(x:String, x:Object))" />
+    <x:Property sap2010:Annotation.AnnotationText="UTC time of the last MusicBrainz request (1 request / 1.1 s), kept by Main across transactions and re-initialization." Name="io_LastRequestUtc" Type="InOutArgument(s:DateTime)" />
+    <x:Property sap2010:Annotation.AnnotationText="Performer outcome of a successful transaction (stored as transaction output 'Outcome')." Name="out_Outcome" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Performer message of a successful transaction (stored as transaction output 'Message')." Name="out_Message" Type="OutArgument(x:String)" />
   </x:Members>
   <VisualBasic.Settings>
     <x:Null />
   </VisualBasic.Settings>
-  <sap:VirtualizedContainerService.HintSize>818.4,454.4</sap:VirtualizedContainerService.HintSize>
   <sap2010:WorkflowViewState.IdRef>ProcessTransaction_1</sap2010:WorkflowViewState.IdRef>
   <TextExpression.NamespacesForImplementation>
-    <scg:List x:TypeArguments="x:String" Capacity="50">
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
       <x:String>Microsoft.VisualBasic</x:String>
       <x:String>Microsoft.VisualBasic.Activities</x:String>
       <x:String>System</x:String>
       <x:String>System.Activities</x:String>
       <x:String>System.Activities.Expressions</x:String>
       <x:String>System.Activities.Statements</x:String>
-      <x:String>System.Activities.Validation</x:String>
-      <x:String>System.Activities.XamlIntegration</x:String>
-      <x:String>System.Collections</x:String>
       <x:String>System.Collections.Generic</x:String>
-      <x:String>System.Collections.ObjectModel</x:String>
-      <x:String>System.Data</x:String>
-      <x:String>System.Diagnostics</x:String>
-      <x:String>System.Drawing</x:String>
-      <x:String>System.IO</x:String>
       <x:String>System.Linq</x:String>
-      <x:String>System.Net.Mail</x:String>
-      <x:String>System.Runtime.InteropServices</x:String>
-      <x:String>System.Runtime.Serialization</x:String>
-      <x:String>System.Windows.Forms</x:String>
-      <x:String>System.Windows.Markup</x:String>
-      <x:String>System.Xml</x:String>
-      <x:String>System.Xml.Linq</x:String>
       <x:String>UiPath.Core</x:String>
       <x:String>UiPath.Core.Activities</x:String>
-      <x:String>GlobalVariablesNamespace</x:String>
-      <x:String>GlobalConstantsNamespace</x:String>
     </scg:List>
   </TextExpression.NamespacesForImplementation>
   <TextExpression.ReferencesForImplementation>
-    <scg:List x:TypeArguments="AssemblyReference" Capacity="40">
-      <AssemblyReference>GlobalVariablesT1PNoYwrqg</AssemblyReference>
-      <AssemblyReference>Microsoft.Bcl.AsyncInterfaces</AssemblyReference>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
       <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
-      <AssemblyReference>mscorlib</AssemblyReference>
-      <AssemblyReference>PresentationCore</AssemblyReference>
-      <AssemblyReference>PresentationFramework</AssemblyReference>
       <AssemblyReference>System</AssemblyReference>
       <AssemblyReference>System.Activities</AssemblyReference>
       <AssemblyReference>System.Collections</AssemblyReference>
-      <AssemblyReference>System.ComponentModel</AssemblyReference>
-      <AssemblyReference>System.ComponentModel.Composition</AssemblyReference>
-      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
-      <AssemblyReference>System.Configuration.ConfigurationManager</AssemblyReference>
-      <AssemblyReference>System.Console</AssemblyReference>
       <AssemblyReference>System.Core</AssemblyReference>
-      <AssemblyReference>System.Data</AssemblyReference>
-      <AssemblyReference>System.Drawing</AssemblyReference>
       <AssemblyReference>System.Linq</AssemblyReference>
-      <AssemblyReference>System.Memory</AssemblyReference>
-      <AssemblyReference>System.ObjectModel</AssemblyReference>
       <AssemblyReference>System.Private.CoreLib</AssemblyReference>
-      <AssemblyReference>System.Private.Uri</AssemblyReference>
-      <AssemblyReference>System.Runtime.InteropServices</AssemblyReference>
-      <AssemblyReference>System.Runtime.Serialization</AssemblyReference>
-      <AssemblyReference>System.Security.Permissions</AssemblyReference>
-      <AssemblyReference>System.ServiceModel</AssemblyReference>
-      <AssemblyReference>System.ValueTuple</AssemblyReference>
-      <AssemblyReference>System.Windows.Forms</AssemblyReference>
-      <AssemblyReference>System.Xaml</AssemblyReference>
-      <AssemblyReference>System.Xml</AssemblyReference>
-      <AssemblyReference>System.Xml.Linq</AssemblyReference>
-      <AssemblyReference>UiPath.Excel</AssemblyReference>
-      <AssemblyReference>UiPath.OCR.Activities.Design</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
       <AssemblyReference>UiPath.System.Activities</AssemblyReference>
-      <AssemblyReference>UiPath.System.Activities.Design</AssemblyReference>
-      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
-      <AssemblyReference>UiPath.UIAutomationCore</AssemblyReference>
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
-      <AssemblyReference>WindowsBase</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
-  <Sequence sap2010:Annotation.AnnotationText="Invoke major steps of the business process, which are usually implemented by multiple subworkflows.&#xA;&#xA;If a BusinessRuleException is thrown, the transaction is skipped. &#xA;If another kind of exception occurs, the current transaction can be retried. " DisplayName="Process" sap:VirtualizedContainerService.HintSize="375.2,389.6" sap2010:WorkflowViewState.IdRef="Sequence_1">
+  <Sequence sap2010:Annotation.AnnotationText="Processes one Lyrebird_Validate item with ProcessValidateQueueItem and maps the result to the queue transaction (Documentation/Lyrebird_DataContract.md, step 3):&#xA;- a known performer outcome -&gt; returns normally -&gt; Successful (Output: Outcome, Message);&#xA;- BusinessRuleException -&gt; rethrown -&gt; Failed (Business), never retried;&#xA;- any other exception (MusicBrainz api_error, Supabase / Orchestrator errors, an unknown outcome) -&gt; rethrown -&gt; Failed (Application), retried by Orchestrator (Config MaxRetryNumber = 0: no local retry loop).&#xA;On the LAST attempt (queue auto retry off, or RetryNo &gt;= the queue's max retries) HandleExhaustedValidateItem first reconciles the wishlist row with the output queue." DisplayName="Process" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="Outcome" />
+      <Variable x:TypeArguments="x:String" Name="ResultMessage" />
+      <Variable x:TypeArguments="x:Boolean" Name="IsLastAttempt" />
+      <Variable x:TypeArguments="x:String" Name="ReconcileAction" />
+      <Variable x:TypeArguments="x:String" Name="ReconcileMessage" />
+    </Sequence.Variables>
     <sap:WorkflowViewStateService.ViewState>
       <scg:Dictionary x:TypeArguments="x:String, x:Object">
         <x:Boolean x:Key="IsExpanded">True</x:Boolean>
         <x:Boolean x:Key="IsAnnotationDocked">True</x:Boolean>
       </scg:Dictionary>
     </sap:WorkflowViewStateService.ViewState>
-    <ui:LogMessage DisplayName="Log Message Process Start" sap:VirtualizedContainerService.HintSize="333.6,92.8" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[&quot;Started Process&quot;]" />
-    <ui:Comment DisplayName="Comment (placeholder)" sap:VirtualizedContainerService.HintSize="333.6,56" sap2010:WorkflowViewState.IdRef="Comment_1" Text="//  Invoke steps of the process" />
+    <Assign x:TypeArguments="x:Boolean" sap2010:Annotation.AnnotationText="The queue's real settings, read at startup (GetQueueSettings)." DisplayName="Assign IsLastAttempt" sap2010:WorkflowViewState.IdRef="Assign_1" To="[IsLastAttempt]" Value="[Not Convert.ToBoolean(in_Config(&quot;ValidateQueueAutoRetry&quot;)) OrElse in_TransactionItem.RetryNo &gt;= Convert.ToInt32(in_Config(&quot;ValidateQueueMaxRetries&quot;))]" />
+    <ui:LogMessage DisplayName="Log process start" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Process {in_TransactionItem.Reference}: attempt {in_TransactionItem.RetryNo + 1}{If(IsLastAttempt, &quot; (last attempt)&quot;, String.Empty)}; last MusicBrainz request {If(io_LastRequestUtc = DateTime.MinValue, &quot;none in this job&quot;, io_LastRequestUtc.ToString(&quot;HH:mm:ss.fff&quot;) &amp; &quot; UTC&quot;)}.&quot;]" />
+    <TryCatch DisplayName="Try the validation performer" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+      <TryCatch.Try>
+        <Sequence DisplayName="Validate one item" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke ProcessValidateQueueItem" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Wishlist\ProcessValidateQueueItem.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="ui:QueueItem" x:Key="in_TransactionItem">[in_TransactionItem]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_WishlistQueueName">[in_Config("WishlistQueueName").ToString]</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_Config("OrchestratorQueueFolder").ToString]</InArgument>
+              <InOutArgument x:TypeArguments="s:DateTime" x:Key="io_LastRequestUtc">[io_LastRequestUtc]</InOutArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_FailAfterStep">[If(in_Config.ContainsKey("TestFailAfterStep"), Convert.ToString(in_Config("TestFailAfterStep")), String.Empty)]</InArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_Outcome">[Outcome]</OutArgument>
+              <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[ResultMessage]</OutArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <If Condition="[Not {&quot;queued&quot;, &quot;needs_release_choice&quot;, &quot;duplicate_release&quot;, &quot;check_spelling&quot;, &quot;not_found&quot;, &quot;already_completed&quot;, &quot;stale_submission&quot;, &quot;superseded&quot;}.Contains(If(Outcome, String.Empty))]" sap2010:Annotation.AnnotationText="Explicit mapping: only these outcomes complete the transaction as Successful. Anything else is a programming error and becomes a system exception." DisplayName="If the outcome is unknown" sap2010:WorkflowViewState.IdRef="If_1">
+            <If.Then>
+              <Throw DisplayName="Throw unknown outcome" Exception="[New InvalidOperationException($&quot;{in_TransactionItem.Reference}: unknown performer outcome '{Outcome}'.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+            </If.Then>
+          </If>
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Outcome" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_Outcome]" Value="[Outcome]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_Message]" Value="[If(ResultMessage, String.Empty)]" />
+          <ui:LogMessage DisplayName="Log outcome" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;Process {in_TransactionItem.Reference}: {Outcome} -&gt; Successful. {ResultMessage}&quot;]" />
+        </Sequence>
+      </TryCatch.Try>
+      <TryCatch.Catches>
+        <Catch x:TypeArguments="ui:BusinessRuleException" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+          <ActivityAction x:TypeArguments="ui:BusinessRuleException">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="ui:BusinessRuleException" Name="businessException" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Business rejection: no retry" sap2010:WorkflowViewState.IdRef="Sequence_3">
+              <ui:LogMessage DisplayName="Log business rejection" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Warn" Message="[$&quot;Process {in_TransactionItem.Reference}: business rejection -&gt; Failed (Business), no retry: {businessException.Message}&quot;]" />
+              <Rethrow DisplayName="Rethrow business exception" sap2010:WorkflowViewState.IdRef="Rethrow_1" />
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+        <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_2">
+          <ActivityAction x:TypeArguments="s:Exception">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Technical failure: Orchestrator retry" sap2010:WorkflowViewState.IdRef="Sequence_4">
+              <If Condition="[IsLastAttempt]" DisplayName="If this was the last attempt" sap2010:WorkflowViewState.IdRef="If_2">
+                <If.Then>
+                  <TryCatch DisplayName="Try reconcile the exhausted item" sap2010:WorkflowViewState.IdRef="TryCatch_2">
+                    <TryCatch.Try>
+                      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke HandleExhaustedValidateItem" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Wishlist\HandleExhaustedValidateItem.xaml">
+                        <ui:InvokeWorkflowFile.Arguments>
+                          <InArgument x:TypeArguments="ui:QueueItem" x:Key="in_TransactionItem">[in_TransactionItem]</InArgument>
+                          <InArgument x:TypeArguments="x:String" x:Key="in_WishlistQueueName">[in_Config("WishlistQueueName").ToString]</InArgument>
+                          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_Config("OrchestratorQueueFolder").ToString]</InArgument>
+                          <InArgument x:TypeArguments="x:String" x:Key="in_FailureMessage">[exception.Message]</InArgument>
+                          <OutArgument x:TypeArguments="x:String" x:Key="out_Action">[ReconcileAction]</OutArgument>
+                          <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[ReconcileMessage]</OutArgument>
+                        </ui:InvokeWorkflowFile.Arguments>
+                      </ui:InvokeWorkflowFile>
+                    </TryCatch.Try>
+                    <TryCatch.Catches>
+                      <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_3">
+                        <ActivityAction x:TypeArguments="s:Exception">
+                          <ActivityAction.Argument>
+                            <DelegateInArgument x:TypeArguments="s:Exception" Name="reconcileException" />
+                          </ActivityAction.Argument>
+                          <ui:LogMessage DisplayName="Log reconciliation failed" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Error" Message="[$&quot;Process {in_TransactionItem.Reference}: last attempt failed and the reconciliation failed too ({reconcileException.GetType().Name}: {reconcileException.Message}). Row and reservation left unchanged; check the row and the output queue.&quot;]" />
+                        </ActivityAction>
+                      </Catch>
+                    </TryCatch.Catches>
+                  </TryCatch>
+                </If.Then>
+              </If>
+              <ui:LogMessage DisplayName="Log technical failure" sap2010:WorkflowViewState.IdRef="LogMessage_5" Level="Error" Message="[$&quot;Process {in_TransactionItem.Reference}: technical failure -&gt; Failed (Application){If(IsLastAttempt, &quot;, no retries left&quot;, &quot;, Orchestrator will retry&quot;)}: {exception.GetType().Name}: {exception.Message}&quot;]" />
+              <Rethrow DisplayName="Rethrow system exception" sap2010:WorkflowViewState.IdRef="Rethrow_2" />
+            </Sequence>
+          </ActivityAction>
+        </Catch>
+      </TryCatch.Catches>
+    </TryCatch>
   </Sequence>
 </Activity>
