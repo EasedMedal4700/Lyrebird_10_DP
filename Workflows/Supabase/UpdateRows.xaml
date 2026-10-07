@@ -1,4 +1,4 @@
-<Activity mc:Ignorable="sap2010" x:Class="Workflows_Supabase_UpdateRows" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ss="clr-namespace:System.Security;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uwah="clr-namespace:UiPath.Web.Activities.Http;assembly=UiPath.Web.Activities" xmlns:uwahm="clr-namespace:UiPath.Web.Activities.Http.Models;assembly=UiPath.Web.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Supabase_UpdateRows" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ss="clr-namespace:System.Security;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uwah="clr-namespace:UiPath.Web.Activities.Http;assembly=UiPath.Web.Activities" xmlns:uwahm="clr-namespace:UiPath.Web.Activities.Http.Models;assembly=UiPath.Web.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <x:Members>
     <x:Property sap2010:Annotation.AnnotationText="Name of the table in the lyrebird schema (e.g. wishlist)." Name="in_Table" Type="InArgument(x:String)" />
     <x:Property sap2010:Annotation.AnnotationText="PostgREST filter selecting the row(s) to update, without the leading '?', e.g. id=eq.42. Required: an empty filter is refused so the whole table is never updated." Name="in_Filter" Type="InArgument(x:String)" />
@@ -8,6 +8,7 @@
   <VisualBasic.Settings>
     <x:Null />
   </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
   <TextExpression.NamespacesForImplementation>
     <scg:List x:TypeArguments="x:String" Capacity="32">
       <x:String>Microsoft.VisualBasic</x:String>
@@ -27,6 +28,8 @@
       <x:String>UiPath.Web.Activities</x:String>
       <x:String>UiPath.Web.Activities.Http</x:String>
       <x:String>UiPath.Web.Activities.Http.Models</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>GlobalConstantsNamespace</x:String>
     </scg:List>
   </TextExpression.NamespacesForImplementation>
   <TextExpression.ReferencesForImplementation>
@@ -48,9 +51,10 @@
       <AssemblyReference>UiPath.System.Activities</AssemblyReference>
       <AssemblyReference>UiPath.Web.Activities</AssemblyReference>
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
-  <Sequence sap2010:Annotation.AnnotationText="Updates row(s) in a Supabase table in the lyrebird schema via the REST API (PATCH) and returns the updated rows." DisplayName="Supabase Update Rows" sap2010:WorkflowViewState.IdRef="Sequence_1">
+  <Sequence sap2010:Annotation.AnnotationText="Updates row(s) in a Supabase table in the lyrebird schema via the REST API (PATCH) and returns the updated rows." DisplayName="Supabase Update Rows" sap:VirtualizedContainerService.HintSize="1608,974" sap2010:WorkflowViewState.IdRef="Sequence_1">
     <Sequence.Variables>
       <Variable x:TypeArguments="x:String" Name="RestUrl" />
       <Variable x:TypeArguments="x:String" Name="Schema" />
@@ -59,14 +63,19 @@
       <Variable x:TypeArguments="x:String" Name="RequestUrl" />
       <Variable x:TypeArguments="uwahm:HttpResponseSummary" Name="Response" />
     </Sequence.Variables>
-    <If Condition="[String.IsNullOrWhiteSpace(in_Filter)]" DisplayName="If filter is empty" sap2010:WorkflowViewState.IdRef="If_1">
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <If Condition="[String.IsNullOrWhiteSpace(in_Filter)]" DisplayName="If filter is empty" sap:VirtualizedContainerService.HintSize="650,225" sap2010:WorkflowViewState.IdRef="If_1">
       <If.Then>
         <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
           <Throw DisplayName="Throw empty filter" Exception="[New ArgumentException($&quot;Supabase update on '{in_Table}' needs a filter (e.g. id=eq.42); refusing to update every row.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
         </Sequence>
       </If.Then>
     </If>
-    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetConnection" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetConnection.xaml">
+    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetConnection" sap:VirtualizedContainerService.HintSize="650,57" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetConnection.xaml">
       <ui:InvokeWorkflowFile.Arguments>
         <OutArgument x:TypeArguments="x:String" x:Key="out_RestUrl">[RestUrl]</OutArgument>
         <OutArgument x:TypeArguments="x:String" x:Key="out_Schema">[Schema]</OutArgument>
@@ -74,22 +83,32 @@
         <OutArgument x:TypeArguments="x:String" x:Key="out_AssetFolder">[AssetFolder]</OutArgument>
       </ui:InvokeWorkflowFile.Arguments>
     </ui:InvokeWorkflowFile>
-    <Assign x:TypeArguments="x:String" DisplayName="Assign RequestUrl" sap2010:WorkflowViewState.IdRef="Assign_2" To="[RequestUrl]" Value="[RestUrl &amp; in_Table.Trim &amp; &quot;?&quot; &amp; in_Filter.Trim.TrimStart(&quot;?&quot;c)]" />
-    <Sequence DisplayName="Call Supabase (PATCH)" sap2010:WorkflowViewState.IdRef="Sequence_10">
+    <Assign x:TypeArguments="x:String" DisplayName="Assign RequestUrl" sap:VirtualizedContainerService.HintSize="650,54" sap2010:WorkflowViewState.IdRef="Assign_2" To="[RequestUrl]" Value="[RestUrl &amp; in_Table.Trim &amp; &quot;?&quot; &amp; in_Filter.Trim.TrimStart(&quot;?&quot;c)]" />
+    <Sequence DisplayName="Call Supabase (PATCH)" sap:VirtualizedContainerService.HintSize="650,197" sap2010:WorkflowViewState.IdRef="Sequence_10">
       <Sequence.Variables>
         <Variable x:TypeArguments="ss:SecureString" Name="ApiKey" />
       </Sequence.Variables>
-      <ui:GetSecret TimeoutMS="{x:Null}" AssetName="[ApiKeyAssetName]" DisplayName="Get Secret Supabase API key" FolderPath="[AssetFolder]" sap2010:WorkflowViewState.IdRef="GetSecret_1" Secret="[ApiKey]" />
-      <uwah:NetHttpRequest BasicAuthPassword="{x:Null}" BasicAuthSecurePassword="{x:Null}" BasicAuthUsername="{x:Null}" BinaryPayload="{x:Null}" ClientCertPassword="{x:Null}" ClientCertPath="{x:Null}" ClientCertSecurePassword="{x:Null}" Cookies="{x:Null}" CustomNegotiatedAuthCredentials="{x:Null}" FilePath="{x:Null}" FormData="{x:Null}" FormDataParts="{x:Null}" LocalFiles="{x:Null}" OAuthToken="{x:Null}" OutputFileName="{x:Null}" OutputFileTargetFolder="{x:Null}" Parameters="{x:Null}" PathResource="{x:Null}" ProxyConfiguration="{x:Null}" ResourceFiles="{x:Null}" RetryStatusCodes="{x:Null}" sap2010:Annotation.AnnotationText="ST-SEC-009 ACCEPTED RISK (2026-10-06, see Documentation/Lyrebird_DataContract.md section 'Credential handling'): Supabase needs the key in the apikey and Authorization headers and Headers only accepts plain strings, so the key is converted here, at the point of use only.&#xA;Mitigations: ApiKey is scoped to this sequence, SaveRawRequestResponse = False (it would dump the apikey header unredacted), and the robot log level for this process must stay below Verbose (Verbose logs activity arguments, including Headers). Do not copy this pattern to other workflows; Tests/SecureStringConversionGuardTestCase.xaml fails if you do." AuthenticationType="None" ContinueOnError="False" DisableSslVerification="False" DisplayName="HTTP PATCH Supabase rows" EnableCookies="True" FileOverwrite="AutoRename" FollowRedirects="True" Headers="[New Dictionary(Of String, String) From { {&quot;apikey&quot;, New NetworkCredential(String.Empty, ApiKey).Password}, {&quot;Authorization&quot;, &quot;Bearer &quot; &amp; New NetworkCredential(String.Empty, ApiKey).Password}, {&quot;Accept-Profile&quot;, Schema}, {&quot;Content-Profile&quot;, Schema}, {&quot;Prefer&quot;, &quot;return=representation&quot;} }]" sap2010:WorkflowViewState.IdRef="NetHttpRequest_1" InitialDelay="500" MaxRedirects="3" MaxRetryAfterDelay="30000" Method="PATCH" Multiplier="2" PreferRetryAfterValue="True" RequestBodyType="Text" RequestUrl="[RequestUrl]" Result="[Response]" RetryCount="[3]" SaveRawRequestResponse="False" SaveResponseAsFile="False" TextPayload="[in_JsonBody]" TextPayloadContentType="application/json" TextPayloadEncoding="UTF-8" TimeoutInMiliseconds="[30000]" TlsProtocol="Automatic" UseJitter="True" UseOsNegotiatedAuthCredentials="True" />
+      <sap:WorkflowViewStateService.ViewState>
+        <scg:Dictionary x:TypeArguments="x:String, x:Object">
+          <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+        </scg:Dictionary>
+      </sap:WorkflowViewStateService.ViewState>
+      <ui:GetSecret TimeoutMS="{x:Null}" AssetName="[ApiKeyAssetName]" DisplayName="Get Secret Supabase API key" FolderPath="[AssetFolder]" sap:VirtualizedContainerService.HintSize="616,57" sap2010:WorkflowViewState.IdRef="GetSecret_1" Secret="[ApiKey]" />
+      <uwah:NetHttpRequest BasicAuthPassword="{x:Null}" BasicAuthSecurePassword="{x:Null}" BasicAuthUsername="{x:Null}" BinaryPayload="{x:Null}" ClientCertPassword="{x:Null}" ClientCertPath="{x:Null}" ClientCertSecurePassword="{x:Null}" Cookies="{x:Null}" CustomNegotiatedAuthCredentials="{x:Null}" FilePath="{x:Null}" FormData="{x:Null}" LocalFiles="{x:Null}" OAuthToken="{x:Null}" OutputFileName="{x:Null}" OutputFileTargetFolder="{x:Null}" Parameters="{x:Null}" PathResource="{x:Null}" ProxyConfiguration="{x:Null}" ResourceFiles="{x:Null}" sap2010:Annotation.AnnotationText="ST-SEC-009 ACCEPTED RISK (2026-10-06, see Documentation/Lyrebird_DataContract.md section 'Credential handling'): Supabase needs the key in the apikey and Authorization headers and Headers only accepts plain strings, so the key is converted here, at the point of use only.&#xA;Mitigations: ApiKey is scoped to this sequence, SaveRawRequestResponse = False (it would dump the apikey header unredacted), and the robot log level for this process must stay below Verbose (Verbose logs activity arguments, including Headers). Do not copy this pattern to other workflows; Tests/SecureStringConversionGuardTestCase.xaml fails if you do." AuthenticationType="None" ContinueOnError="False" DisableSslVerification="False" DisplayName="HTTP PATCH Supabase rows" EnableCookies="True" FileOverwrite="AutoRename" FollowRedirects="True" FormDataParts="[New List (Of FormDataPart) From _&#xD;&#xA;{&#xD;&#xA;&#x9;New FileFormDataPart(),&#xD;&#xA;&#x9;New BinaryFormDataPart(),&#xD;&#xA;&#x9;New TextFormDataPart()&#xD;&#xA;}]" Headers="[New Dictionary(Of String, String) From { {&quot;apikey&quot;, New NetworkCredential(String.Empty, ApiKey).Password}, {&quot;Authorization&quot;, &quot;Bearer &quot; &amp; New NetworkCredential(String.Empty, ApiKey).Password}, {&quot;Accept-Profile&quot;, Schema}, {&quot;Content-Profile&quot;, Schema}, {&quot;Prefer&quot;, &quot;return=representation&quot;} }]" sap:VirtualizedContainerService.HintSize="616,48" sap2010:WorkflowViewState.IdRef="NetHttpRequest_1" InitialDelay="500" MaxRedirects="3" MaxRetryAfterDelay="30000" Method="PATCH" Multiplier="2" PreferRetryAfterValue="True" RequestBodyType="Text" RequestUrl="[RequestUrl]" Result="[Response]" RetryCount="[3]" RetryStatusCodes="[New List (Of System.Net.HttpStatusCode) From _&#xD;&#xA;{&#xD;&#xA;&#x9;System.Net.HttpStatusCode.RequestTimeout,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.TooManyRequests,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.InternalServerError,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.BadGateway,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.ServiceUnavailable,&#xD;&#xA;&#x9;System.Net.HttpStatusCode.GatewayTimeout&#xD;&#xA;}]" SaveRawRequestResponse="False" SaveResponseAsFile="False" TextPayload="[in_JsonBody]" TextPayloadContentType="application/json" TextPayloadEncoding="UTF-8" TimeoutInMiliseconds="[30000]" TlsProtocol="Automatic" UseJitter="True" UseOsNegotiatedAuthCredentials="True" />
     </Sequence>
-    <If Condition="[CInt(Response.StatusCode) &lt; 200 OrElse CInt(Response.StatusCode) &gt;= 300]" DisplayName="If Supabase returned an error" sap2010:WorkflowViewState.IdRef="If_2">
+    <If Condition="[CInt(Response.StatusCode) &lt; 200 OrElse CInt(Response.StatusCode) &gt;= 300]" DisplayName="If Supabase returned an error" sap:VirtualizedContainerService.HintSize="650,313" sap2010:WorkflowViewState.IdRef="If_2">
       <If.Then>
-        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_3">
-          <Throw DisplayName="Throw Supabase PATCH failed" Exception="[New Exception($&quot;Supabase PATCH '{in_Table}' ({in_Filter}) failed with HTTP {CInt(Response.StatusCode)}: {Response.TextContent}&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_2" />
+        <Sequence DisplayName="Then" sap:VirtualizedContainerService.HintSize="450,108" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <sap:WorkflowViewStateService.ViewState>
+            <scg:Dictionary x:TypeArguments="x:String, x:Object">
+              <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+            </scg:Dictionary>
+          </sap:WorkflowViewStateService.ViewState>
+          <Throw DisplayName="Throw Supabase PATCH failed" Exception="[New Exception($&quot;Supabase PATCH '{in_Table}' ({in_Filter}) failed with HTTP {CInt(Response.StatusCode)}: {Response.TextContent}&quot;)]" sap:VirtualizedContainerService.HintSize="416,48" sap2010:WorkflowViewState.IdRef="Throw_2" />
         </Sequence>
       </If.Then>
     </If>
-    <ui:DeserializeJsonArray DisplayName="Deserialize updated rows" sap2010:WorkflowViewState.IdRef="DeserializeJsonArray_1" JsonArray="[out_Rows]" JsonString="[Response.TextContent]" />
-    <ui:LogMessage DisplayName="Log rows updated" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Supabase: updated {out_Rows.Count} row(s) in '{in_Table}' ({in_Filter}).&quot;]" />
+    <ui:DeserializeJsonArray DisplayName="Deserialize updated rows" sap:VirtualizedContainerService.HintSize="650,57" sap2010:WorkflowViewState.IdRef="DeserializeJsonArray_1" JsonArray="[out_Rows]" JsonString="[Response.TextContent]" />
+    <ui:LogMessage DisplayName="Log rows updated" sap:VirtualizedContainerService.HintSize="650,48" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Supabase: updated {out_Rows.Count} row(s) in '{in_Table}' ({in_Filter}).&quot;]" />
   </Sequence>
 </Activity>
