@@ -1,10 +1,11 @@
-<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_LoadNewWishlistItems" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueName="Lyrebird_Validate" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueFolder="Lyrebird" this:Workflows_Wishlist_LoadNewWishlistItems.in_DryRun="False" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_LoadNewWishlistItems" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueName="Lyrebird_Validate" this:Workflows_Wishlist_LoadNewWishlistItems.in_QueueFolder="Lyrebird" this:Workflows_Wishlist_LoadNewWishlistItems.in_DryRun="False" this:Workflows_Wishlist_LoadNewWishlistItems.in_PersistReferences="True" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <x:Members>
     <x:Property sap2010:Annotation.AnnotationText="Orchestrator queue to fill. Default Lyrebird_Validate. The queue must exist and must be created with 'Enforce unique references' on." Name="in_QueueName" Type="InArgument(x:String)" />
     <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the queue. Default Lyrebird. Empty = the folder the job runs in." Name="in_QueueFolder" Type="InArgument(x:String)" />
     <x:Property sap2010:Annotation.AnnotationText="Optional PostgREST query for the wishlist table. Empty = select=*&amp;status=eq.new&amp;order=id.asc (select=* so the proposed 'submission' column is picked up automatically once it exists)." Name="in_Query" Type="InArgument(x:String)" />
     <x:Property sap2010:Annotation.AnnotationText="Optional rows to load instead of reading Supabase (tests, controlled manual loads). Nothing = read Supabase with in_Query." Name="in_Rows" Type="InArgument(njl:JArray)" />
     <x:Property sap2010:Annotation.AnnotationText="True = build and log every queue item but send nothing to Orchestrator. Default False." Name="in_DryRun" Type="InArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="True (default) = persist each new Reference on the wishlist row (queue_reference) before adding the item. False ONLY for synthetic in_Rows in tests: the Reference is used as built and Supabase is not written." Name="in_PersistReferences" Type="InArgument(x:Boolean)" />
     <x:Property sap2010:Annotation.AnnotationText="Items actually added to the queue. Always 0 in a dry run." Name="out_AddedCount" Type="OutArgument(x:Int32)" />
     <x:Property sap2010:Annotation.AnnotationText="Dry run only: items that would be sent to Orchestrator. Not checked against the queue, so some may turn out to be already queued in a real run. Always 0 in a real run." Name="out_WouldAddCount" Type="OutArgument(x:Int32)" />
     <x:Property sap2010:Annotation.AnnotationText="Real run only: items Orchestrator rejected as a confirmed duplicate reference (HTTP 409 'Duplicate Reference'), i.e. already in the queue. Always 0 in a dry run." Name="out_AlreadyQueuedCount" Type="OutArgument(x:Int32)" />
@@ -12,6 +13,7 @@
     <x:Property sap2010:Annotation.AnnotationText="Rows skipped because they miss data the payload needs (see the Warn log per row)." Name="out_InvalidCount" Type="OutArgument(x:Int32)" />
     <x:Property sap2010:Annotation.AnnotationText="References actually added, in load order. Always empty in a dry run." Name="out_AddedReferences" Type="OutArgument(scg:List(x:String))" />
     <x:Property sap2010:Annotation.AnnotationText="Dry run only: references that would be sent, in load order." Name="out_WouldAddReferences" Type="OutArgument(scg:List(x:String))" />
+    <x:Property sap2010:Annotation.AnnotationText="Live run only: rows skipped because they changed (status, submission, deleted) while their Reference was being persisted. Nothing was added for them." Name="out_ChangedCount" Type="OutArgument(x:Int32)" />
   </x:Members>
   <VisualBasic.Settings>
     <x:Null />
@@ -57,7 +59,7 @@
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
-  <Sequence sap2010:Annotation.AnnotationText="Input loader (dispatcher part) of Lyrebird_10_DP: reads wishlist rows with status 'new' from Supabase and adds one Lyrebird_Validate queue item per row.&#xA;&#xA;Safe to run repeatedly: the Reference (WL-&lt;id&gt;-S&lt;submission&gt;) is unique per row and submission, duplicates inside the batch are skipped, and the queue's 'Enforce unique references' rejects rows that are already queued. Only that confirmed rejection (OrchestratorHttpException, HTTP 409, 'Duplicate Reference') is absorbed; every other error is logged and rethrown.&#xA;Dry run sends nothing: it reports 'would add' separately from 'added' and cannot know what is already queued.&#xA;Read-only on Supabase: the wishlist status is not changed here.&#xA;Not connected to Main.xaml yet." DisplayName="Load New Wishlist Items" sap2010:WorkflowViewState.IdRef="Sequence_1">
+  <Sequence sap2010:Annotation.AnnotationText="Input loader (dispatcher part) of Lyrebird_10_DP: reads wishlist rows with status 'new' from Supabase and adds one Lyrebird_Validate queue item per row.&#xA;&#xA;Safe to run repeatedly: the Reference ('&lt;artist&gt; - &lt;album&gt; | WL-&lt;id&gt;-S&lt;submission&gt;') is unique per row and submission and is persisted on the row (queue_reference) once per submission BEFORE the item is added, then reused unchanged, duplicates inside the batch are skipped, and the queue's 'Enforce unique references' rejects rows that are already queued. Only that confirmed rejection (OrchestratorHttpException, HTTP 409, 'Duplicate Reference') is absorbed; every other error is logged and rethrown.&#xA;Dry run sends nothing: it reports 'would add' separately from 'added' and cannot know what is already queued.&#xA;Writes to Supabase only the queue_reference of a new submission (guarded PATCH, PersistQueueReference); the wishlist status is not changed here.&#xA;Not connected to Main.xaml yet." DisplayName="Load New Wishlist Items" sap2010:WorkflowViewState.IdRef="Sequence_1">
     <Sequence.Variables>
       <Variable x:TypeArguments="x:String" Default="select=*&amp;status=eq.new&amp;order=id.asc" Name="DefaultQuery" />
       <Variable x:TypeArguments="x:String" Name="Query" />
@@ -78,6 +80,7 @@
       <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_AlreadyQueuedCount" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_AlreadyQueuedCount]" Value="[0]" />
       <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_DuplicateInBatchCount" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_DuplicateInBatchCount]" Value="[0]" />
       <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_InvalidCount" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_InvalidCount]" Value="[0]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Reset out_ChangedCount" sap2010:WorkflowViewState.IdRef="Assign_30" To="[out_ChangedCount]" Value="[0]" />
       <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Reset out_AddedReferences" sap2010:WorkflowViewState.IdRef="Assign_6" To="[out_AddedReferences]" Value="[New List(Of String)()]" />
       <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Reset out_WouldAddReferences" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_WouldAddReferences]" Value="[New List(Of String)()]" />
       <Assign x:TypeArguments="x:String" DisplayName="Assign QueueFolder" sap2010:WorkflowViewState.IdRef="Assign_8" To="[QueueFolder]" Value="[If(String.IsNullOrWhiteSpace(in_QueueFolder), Nothing, in_QueueFolder.Trim())]" />
@@ -119,6 +122,9 @@
               <Variable x:TypeArguments="x:String" Name="ItemText" />
               <Variable x:TypeArguments="x:Boolean" Name="IsNewInBatch" />
               <Variable x:TypeArguments="x:String" Name="Action" />
+              <Variable x:TypeArguments="x:Boolean" Name="ReferenceIsStored" />
+              <Variable x:TypeArguments="x:Boolean" Default="True" Name="ReferenceReady" />
+              <Variable x:TypeArguments="x:String" Name="PersistMessage" />
             </Sequence.Variables>
             <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildValidateQueueItem" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Wishlist\BuildValidateQueueItem.xaml">
               <ui:InvokeWorkflowFile.Arguments>
@@ -127,6 +133,7 @@
                 <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_ItemInformation">[ItemInformation]</OutArgument>
                 <OutArgument x:TypeArguments="x:Boolean" x:Key="out_IsValid">[IsValid]</OutArgument>
                 <OutArgument x:TypeArguments="x:String" x:Key="out_InvalidReason">[InvalidReason]</OutArgument>
+                <OutArgument x:TypeArguments="x:Boolean" x:Key="out_ReferenceIsStored">[ReferenceIsStored]</OutArgument>
               </ui:InvokeWorkflowFile.Arguments>
             </ui:InvokeWorkflowFile>
             <Assign x:TypeArguments="x:Boolean" sap2010:Annotation.AnnotationText="HashSet.Add returns False when the Reference was already seen in this batch. Invalid rows have an empty Reference and are never added." DisplayName="Assign IsNewInBatch" sap2010:WorkflowViewState.IdRef="Assign_11" To="[IsNewInBatch]" Value="[IsValid AndAlso SeenReferences.Add(Reference)]" />
@@ -149,9 +156,33 @@
               <Sequence x:Key="would_add" DisplayName="would_add" sap2010:WorkflowViewState.IdRef="Sequence_9">
                 <Assign x:TypeArguments="x:Int32" DisplayName="Increment out_WouldAddCount" sap2010:WorkflowViewState.IdRef="Assign_16" To="[out_WouldAddCount]" Value="[out_WouldAddCount + 1]" />
                 <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Append out_WouldAddReferences" sap2010:WorkflowViewState.IdRef="Assign_17" To="[out_WouldAddReferences]" Value="[out_WouldAddReferences.Append(Reference).ToList()]" />
-                <ui:LogMessage DisplayName="Log would add" sap2010:WorkflowViewState.IdRef="LogMessage_6" Level="Info" Message="[$&quot;Load wishlist: {ItemText} WOULD ADD (dry run, NOT sent to '{in_QueueName}'). Specific content: {String.Join(&quot;, &quot;, ItemInformation.Select(Function(kv) $&quot;{kv.Key}={kv.Value} ({kv.Value.GetType().Name})&quot;))}&quot;]" />
+                <ui:LogMessage DisplayName="Log would add" sap2010:WorkflowViewState.IdRef="LogMessage_6" Level="Info" Message="[$&quot;Load wishlist: {ItemText} WOULD ADD (dry run, NOT sent to '{in_QueueName}'; Reference {If(ReferenceIsStored, &quot;already stored on the row&quot;, &quot;would be stored on the row first&quot;)}). Specific content: {String.Join(&quot;, &quot;, ItemInformation.Select(Function(kv) $&quot;{kv.Key}={kv.Value} ({kv.Value.GetType().Name})&quot;))}&quot;]" />
               </Sequence>
               <Sequence x:Key="add" DisplayName="add" sap2010:WorkflowViewState.IdRef="Sequence_10">
+                <If Condition="[Not ReferenceIsStored AndAlso in_PersistReferences]" sap2010:Annotation.AnnotationText="Persist the Reference once per submission BEFORE enqueueing, so retries, recovery and the Lyrebird_Wishlist item reuse it unchanged." DisplayName="If the Reference must be stored first" sap2010:WorkflowViewState.IdRef="If_10">
+                  <If.Then>
+                    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke PersistQueueReference" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_10" UnSafe="False" WorkflowFileName="Workflows\Wishlist\PersistQueueReference.xaml">
+                      <ui:InvokeWorkflowFile.Arguments>
+                        <InArgument x:TypeArguments="x:Int64" x:Key="in_WishlistId">[Convert.ToInt64(ItemInformation(&quot;WishlistId&quot;))]</InArgument>
+                        <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[Convert.ToInt32(ItemInformation(&quot;Submission&quot;))]</InArgument>
+                        <InArgument x:TypeArguments="x:String" x:Key="in_Reference">[Reference]</InArgument>
+                        <OutArgument x:TypeArguments="x:String" x:Key="out_Reference">[Reference]</OutArgument>
+                        <OutArgument x:TypeArguments="x:Boolean" x:Key="out_Persisted">[ReferenceReady]</OutArgument>
+                        <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[PersistMessage]</OutArgument>
+                      </ui:InvokeWorkflowFile.Arguments>
+                    </ui:InvokeWorkflowFile>
+                  </If.Then>
+                </If>
+                <If Condition="[Not ReferenceReady]" DisplayName="If the row changed while storing the Reference" sap2010:WorkflowViewState.IdRef="If_11">
+                  <If.Then>
+                    <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_30">
+                      <Assign x:TypeArguments="x:Int32" DisplayName="Increment out_ChangedCount" sap2010:WorkflowViewState.IdRef="Assign_31" To="[out_ChangedCount]" Value="[out_ChangedCount + 1]" />
+                      <ui:LogMessage DisplayName="Log row changed" sap2010:WorkflowViewState.IdRef="LogMessage_20" Level="Warn" Message="[$&quot;Load wishlist: {ItemText} SKIPPED (row changed while storing its Reference: {PersistMessage}). Nothing added.&quot;]" />
+                    </Sequence>
+                  </If.Then>
+                </If>
+                <If Condition="[ReferenceReady]" DisplayName="If the Reference is stored" sap2010:WorkflowViewState.IdRef="If_12">
+                  <If.Then>
                 <TryCatch DisplayName="Try add queue item" sap2010:WorkflowViewState.IdRef="TryCatch_1">
                   <TryCatch.Try>
                     <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_11">
@@ -202,6 +233,8 @@
                     </Catch>
                   </TryCatch.Catches>
                 </TryCatch>
+                  </If.Then>
+                </If>
               </Sequence>
             </Switch>
           </Sequence>
@@ -216,7 +249,7 @@
       </If.Then>
       <If.Else>
         <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_17">
-          <ui:LogMessage DisplayName="Log live summary" sap2010:WorkflowViewState.IdRef="LogMessage_12" Level="Info" Message="[$&quot;Load wishlist finished in {(DateTime.UtcNow - StartUtc).TotalSeconds:0.0} s: {Rows.Count} row(s) read, {out_AddedCount} ADDED, {out_AlreadyQueuedCount} already in queue (confirmed duplicate reference), {out_DuplicateInBatchCount} duplicate(s) in batch, {out_InvalidCount} invalid.&quot;]" />
+          <ui:LogMessage DisplayName="Log live summary" sap2010:WorkflowViewState.IdRef="LogMessage_12" Level="Info" Message="[$&quot;Load wishlist finished in {(DateTime.UtcNow - StartUtc).TotalSeconds:0.0} s: {Rows.Count} row(s) read, {out_AddedCount} ADDED, {out_AlreadyQueuedCount} already in queue (confirmed duplicate reference), {out_DuplicateInBatchCount} duplicate(s) in batch, {out_InvalidCount} invalid, {out_ChangedCount} changed while loading.&quot;]" />
         </Sequence>
       </If.Else>
     </If>

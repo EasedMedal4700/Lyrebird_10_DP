@@ -1,0 +1,52 @@
+[
+  {
+    "name": "ASCII apostrophe",
+    "artist": "Guns N' Roses",
+    "album": "Appetite for Destruction"
+  },
+  {
+    "name": "ampersand percent hash question plus",
+    "artist": "Simon & Garfunkel",
+    "album": "100% #1 Hits? +more"
+  },
+  {
+    "name": "slash and backslash",
+    "artist": "AC/DC",
+    "album": "Back in Black \\ Live"
+  },
+  {
+    "name": "double quotes",
+    "artist": "Weird \"Al\" Yankovic",
+    "album": "Mandatory Fun"
+  },
+  {
+    "name": "accents guillemets dashes ellipsis",
+    "artist": "Sigur Rós",
+    "album": "( ) «Ágætis byrjun» – …"
+  },
+  {
+    "name": "CJK and emoji",
+    "artist": "坂本龍一",
+    "album": "戦場のメリークリスマス 🎵"
+  },
+  {
+    "name": "brackets and symbols",
+    "artist": "<Artist>",
+    "album": "*Album*: Part; 2 = ok, [x] {y} ~ ^ ` @ $"
+  },
+  {
+    "name": "pipe in names",
+    "artist": "A|B",
+    "album": "C|D"
+  },
+  {
+    "name": "curly apostrophe",
+    "artist": "Sinéad O’Connor",
+    "album": "I Do Not Want What I Haven’t Got"
+  },
+  {
+    "name": "long names shortened to 128",
+    "artist": "The Long Artist Name Ensemble & Orchestra of the Lyrebird Integration Test",
+    "album": "A Very Long Album Title That Certainly Does Not Fit Into One Hundred And Twenty Eight Characters Together With The Suffix"
+  }
+]

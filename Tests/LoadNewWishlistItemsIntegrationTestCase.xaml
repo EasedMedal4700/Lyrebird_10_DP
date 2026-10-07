@@ -77,7 +77,7 @@
         </If.Then>
       </If>
       <Assign x:TypeArguments="x:Int64" sap2010:Annotation.AnnotationText="12-digit id from the UTC time, so every run uses a new Reference in the test queue." DisplayName="Assign SyntheticId" sap2010:WorkflowViewState.IdRef="Assign_1" To="[SyntheticId]" Value="[CLng(DateTime.UtcNow.ToString(&quot;yyMMddHHmmss&quot;))]" />
-      <Assign x:TypeArguments="x:String" DisplayName="Assign ExpectedReference" sap2010:WorkflowViewState.IdRef="Assign_2" To="[ExpectedReference]" Value="[$&quot;WL-{SyntheticId}-S1&quot;]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ExpectedReference" sap2010:WorkflowViewState.IdRef="Assign_2" To="[ExpectedReference]" Value="[$&quot;Lyrebird Integration Test - Synthetic {SyntheticId} | WL-{SyntheticId}-S1&quot;]" />
       <Assign x:TypeArguments="njl:JArray" DisplayName="Assign Rows" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Rows]" Value="[New JArray(New JObject(New JProperty(&quot;id&quot;, SyntheticId), New JProperty(&quot;artist&quot;, &quot;Lyrebird Integration Test&quot;), New JProperty(&quot;album&quot;, $&quot;Synthetic {SyntheticId}&quot;), New JProperty(&quot;preferred_format&quot;, &quot;FLAC&quot;)))]" />
       <ui:LogMessage DisplayName="Log test setup" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Integration test: queue '{in_QueueName}' in folder '{in_QueueFolder}', synthetic reference {ExpectedReference}.&quot;]" />
     </Sequence>
@@ -89,6 +89,7 @@
           <InArgument x:TypeArguments="x:String" x:Key="in_Query">[String.Empty]</InArgument>
           <InArgument x:TypeArguments="njl:JArray" x:Key="in_Rows">[Rows]</InArgument>
           <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_PersistReferences">[False]</InArgument>
           <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[FirstAdded]</OutArgument>
           <OutArgument x:TypeArguments="x:Int32" x:Key="out_WouldAddCount">[DiscardInt]</OutArgument>
           <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[FirstAlreadyQueued]</OutArgument>
@@ -105,6 +106,7 @@
           <InArgument x:TypeArguments="x:String" x:Key="in_Query">[String.Empty]</InArgument>
           <InArgument x:TypeArguments="njl:JArray" x:Key="in_Rows">[Rows]</InArgument>
           <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_PersistReferences">[False]</InArgument>
           <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[SecondAdded]</OutArgument>
           <OutArgument x:TypeArguments="x:Int32" x:Key="out_WouldAddCount">[DiscardInt]</OutArgument>
           <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[SecondAlreadyQueued]</OutArgument>
@@ -124,6 +126,7 @@
                 <InArgument x:TypeArguments="x:String" x:Key="in_Query">[String.Empty]</InArgument>
                 <InArgument x:TypeArguments="njl:JArray" x:Key="in_Rows">[Rows]</InArgument>
                 <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_PersistReferences">[False]</InArgument>
                 <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[DiscardInt]</OutArgument>
                 <OutArgument x:TypeArguments="x:Int32" x:Key="out_WouldAddCount">[DiscardInt]</OutArgument>
                 <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[DiscardInt]</OutArgument>

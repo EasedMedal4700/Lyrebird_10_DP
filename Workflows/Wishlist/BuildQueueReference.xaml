@@ -1,0 +1,81 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_BuildQueueReference" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Artist as entered on the wishlist row." Name="in_Artist" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Album as entered on the wishlist row." Name="in_Album" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Wishlist row id (&gt; 0)." Name="in_WishlistId" Type="InArgument(x:Int64)" />
+    <x:Property sap2010:Annotation.AnnotationText="Wishlist submission (&gt;= 1)." Name="in_Submission" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional: the Reference already persisted on the row (column queue_reference). Reused unchanged when it belongs to this id and submission." Name="in_StoredReference" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="'&lt;artist&gt; - &lt;album&gt; | WL-&lt;id&gt;-S&lt;submission&gt;', at most 128 characters." Name="out_Reference" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when out_Reference is the stored Reference (nothing to persist); False when it was built now and must be persisted before enqueueing." Name="out_IsStored" Type="OutArgument(x:Boolean)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Readable queue Reference '&lt;artist&gt; - &lt;album&gt; | WL-&lt;id&gt;-S&lt;submission&gt;'. No side effects.&#xA;&#xA;Rules (verified against Orchestrator 2026-10-07: max 128 characters, longer is HTTP 400; uniqueness is case-insensitive; leading whitespace is trimmed by the server; all other characters tested are stored unchanged):&#xA;- a stored Reference that ends with ' | WL-&lt;id&gt;-S&lt;submission&gt;' is reused unchanged, so retries and recovery keep it even after names are corrected;&#xA;- otherwise control characters and whitespace runs become one space, '|' in names becomes '/', the ASCII apostrophe becomes ’ (Get Queue Items / Get Transaction Item do not escape it in their OData Reference filter; verified 2026-10-07), names are trimmed;&#xA;- the ' | WL-&lt;id&gt;-S&lt;n&gt;' suffix is never shortened; when needed the names part is cut (never inside a surrogate pair) and ends with '…'." DisplayName="Build Queue Reference" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="Suffix" />
+      <Variable x:TypeArguments="x:String" Name="Stored" />
+      <Variable x:TypeArguments="s:Func(x:String, x:String)" Name="Clean" />
+      <Variable x:TypeArguments="x:String" Name="Names" />
+      <Variable x:TypeArguments="x:Int32" Name="Cut" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <If Condition="[in_WishlistId &lt;= 0 OrElse in_Submission &lt; 1]" DisplayName="If id or submission is invalid" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Throw DisplayName="Throw invalid id or submission" Exception="[New ArgumentException($&quot;BuildQueueReference: id {in_WishlistId} / submission {in_Submission} must be positive.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+      </If.Then>
+    </If>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Suffix" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Suffix]" Value="[$&quot; | WL-{in_WishlistId}-S{in_Submission}&quot;]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Stored" sap2010:WorkflowViewState.IdRef="Assign_2" To="[Stored]" Value="[If(in_StoredReference, String.Empty).Trim()]" />
+    <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsStored" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_IsStored]" Value="[Stored.Length &gt; Suffix.Length AndAlso Stored.Length &lt;= 128 AndAlso Stored.EndsWith(Suffix, StringComparison.Ordinal)]" />
+    <Assign x:TypeArguments="s:Func(x:String, x:String)" DisplayName="Assign Clean" sap2010:WorkflowViewState.IdRef="Assign_4" To="[Clean]" Value="[Function(t As String) Regex.Replace(If(t, String.Empty).Replace(&quot;|&quot;, &quot;/&quot;).Replace(&quot;'&quot;, ChrW(&amp;H2019)), &quot;[\p{Cc}\s]+&quot;, &quot; &quot;).Trim()]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Names" sap2010:WorkflowViewState.IdRef="Assign_5" To="[Names]" Value="[Clean(in_Artist) &amp; &quot; - &quot; &amp; Clean(in_Album)]" />
+    <If Condition="[Names.Length &gt; 128 - Suffix.Length]" DisplayName="If the names are too long" sap2010:WorkflowViewState.IdRef="If_2">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign Cut" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Cut]" Value="[128 - Suffix.Length - 1]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign Cut (not inside a surrogate pair)" sap2010:WorkflowViewState.IdRef="Assign_7" To="[Cut]" Value="[If(Char.IsHighSurrogate(Names(Cut - 1)), Cut - 1, Cut)]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign Names (shortened)" sap2010:WorkflowViewState.IdRef="Assign_8" To="[Names]" Value="[Names.Substring(0, Cut).TrimEnd() &amp; ChrW(&amp;H2026)]" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reference" sap2010:WorkflowViewState.IdRef="Assign_9" To="[out_Reference]" Value="[If(out_IsStored, Stored, Names &amp; Suffix)]" />
+  </Sequence>
+</Activity>

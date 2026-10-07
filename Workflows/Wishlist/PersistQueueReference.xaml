@@ -1,0 +1,101 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_PersistQueueReference" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Wishlist row id." Name="in_WishlistId" Type="InArgument(x:Int64)" />
+    <x:Property sap2010:Annotation.AnnotationText="Submission the Reference is for (the row must still have it)." Name="in_Submission" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Reference built by BuildQueueReference: '&lt;artist&gt; - &lt;album&gt; | WL-&lt;id&gt;-S&lt;submission&gt;'." Name="in_Reference" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="The Reference to enqueue with: in_Reference, or the one another loader persisted first for the same submission. Empty when out_Persisted is False." Name="out_Reference" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row holds out_Reference for this submission. False: the row changed (status, submission, deleted); do not enqueue." Name="out_Persisted" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="What happened, for the log." Name="out_Message" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Persists the queue Reference on the wishlist row ONCE per submission, before the Lyrebird_Validate item is added.&#xA;Guarded PATCH: only while the row is still 'new' with this submission and does not yet hold a Reference for this submission (queue_reference is null or ends with another WL-&lt;id&gt;-S&lt;n&gt;). So a stored Reference is never replaced, and two loaders cannot store two different References for one submission.&#xA;0 rows updated -&gt; re-read: if the row now holds a Reference for this submission (another loader was first), use that one; otherwise the row changed and nothing is enqueued." DisplayName="Persist Queue Reference" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="Suffix" />
+      <Variable x:TypeArguments="njl:JArray" Name="Updated" />
+      <Variable x:TypeArguments="njl:JArray" Name="Rows" />
+      <Variable x:TypeArguments="njl:JToken" Name="Row" />
+      <Variable x:TypeArguments="x:String" Name="Stored" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign Suffix" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Suffix]" Value="[$&quot; | WL-{in_WishlistId}-S{in_Submission}&quot;]" />
+    <If Condition="[in_WishlistId &lt;= 0 OrElse in_Submission &lt; 1 OrElse If(in_Reference, String.Empty).Length &gt; 128 OrElse Not If(in_Reference, String.Empty).EndsWith(Suffix, StringComparison.Ordinal) OrElse If(in_Reference, String.Empty).Length = Suffix.Length]" DisplayName="If the Reference is not valid for this row" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Throw DisplayName="Throw invalid Reference" Exception="[New ArgumentException($&quot;PersistQueueReference: '{in_Reference}' is not a valid Reference for wishlist {in_WishlistId} S{in_Submission}.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+      </If.Then>
+    </If>
+    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke UpdateRows (guarded, set queue_reference once)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\UpdateRows.xaml">
+      <ui:InvokeWorkflowFile.Arguments>
+        <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+        <InArgument x:TypeArguments="x:String" x:Key="in_Filter">[$"id=eq.{in_WishlistId}&amp;status=eq.new&amp;submission=eq.{in_Submission}&amp;or=(queue_reference.is.null,queue_reference.not.like.*WL-{in_WishlistId}-S{in_Submission})&amp;select=id,queue_reference"]</InArgument>
+        <InArgument x:TypeArguments="x:String" x:Key="in_JsonBody">[New JObject(New JProperty("queue_reference", in_Reference)).ToString(Newtonsoft.Json.Formatting.None)]</InArgument>
+        <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[Updated]</OutArgument>
+      </ui:InvokeWorkflowFile.Arguments>
+    </ui:InvokeWorkflowFile>
+    <If Condition="[Updated IsNot Nothing AndAlso Updated.Count = 1]" DisplayName="If the Reference was stored now" sap2010:WorkflowViewState.IdRef="If_2">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reference (stored now)" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_Reference]" Value="[If(Updated(0).Value(Of String)(&quot;queue_reference&quot;), in_Reference)]" />
+          <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_Persisted (stored now)" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_Persisted]" Value="[True]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (stored now)" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_Message]" Value="[$&quot;queue_reference stored for S{in_Submission}.&quot;]" />
+        </Sequence>
+      </If.Then>
+      <If.Else>
+        <Sequence DisplayName="Else (0 rows: re-read)" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows wishlist row" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+            <ui:InvokeWorkflowFile.Arguments>
+              <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+              <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=id,status,submission,queue_reference&amp;id=eq.{in_WishlistId}"]</InArgument>
+              <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[Rows]</OutArgument>
+            </ui:InvokeWorkflowFile.Arguments>
+          </ui:InvokeWorkflowFile>
+          <Assign x:TypeArguments="njl:JToken" DisplayName="Assign Row" sap2010:WorkflowViewState.IdRef="Assign_5" To="[Row]" Value="[If(Rows Is Nothing OrElse Rows.Count = 0, Nothing, Rows(0))]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign Stored" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Stored]" Value="[If(Row Is Nothing, String.Empty, If(Row.Value(Of String)(&quot;queue_reference&quot;), String.Empty))]" />
+          <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_Persisted (re-read)" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_Persisted]" Value="[Row IsNot Nothing AndAlso If(Row.Value(Of String)(&quot;status&quot;), String.Empty) = &quot;new&quot; AndAlso If(Row.Value(Of String)(&quot;submission&quot;), String.Empty) = in_Submission.ToString() AndAlso Stored.Length &gt; Suffix.Length AndAlso Stored.EndsWith(Suffix, StringComparison.Ordinal)]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reference (re-read)" sap2010:WorkflowViewState.IdRef="Assign_8" To="[out_Reference]" Value="[If(out_Persisted, Stored, String.Empty)]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (re-read)" sap2010:WorkflowViewState.IdRef="Assign_9" To="[out_Message]" Value="[If(out_Persisted, $&quot;queue_reference for S{in_Submission} was already stored (by another loader); using it.&quot;, If(Row Is Nothing, &quot;row no longer exists&quot;, $&quot;row changed meanwhile (status '{Row.Value(Of String)(&quot;status&quot;)}', submission {Row.Value(Of String)(&quot;submission&quot;)}, queue_reference '{Stored}')&quot;))]" />
+        </Sequence>
+      </If.Else>
+    </If>
+  </Sequence>
+</Activity>

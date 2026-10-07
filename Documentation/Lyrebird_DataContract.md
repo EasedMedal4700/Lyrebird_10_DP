@@ -1,9 +1,11 @@
 # Lyrebird data contract and 10_DP input loading / validation
 
-Status (2026-10-07):
-- **Part 1 (input loading):** built and verified against Supabase and Orchestrator, including the production load into `Lyrebird_Validate` (§ 8, § 10).
-- **Part 2 (validate performer):** built and verified end to end against Supabase, MusicBrainz and Orchestrator, including interrupted-run recovery with controlled failure injection (§ 11, § 10). A first production batch went through the standalone runner into `Lyrebird_Wishlist` (§ 12).
-- The database migration for part 2 is **applied** (§ 7). The Orchestrator queues **exist** (§ 6).
+Status (2026-10-07, after the development reset, § 12):
+- **Part 1 (input loading):** built and verified against Supabase and Orchestrator (§ 8, § 10).
+- **Part 2 (validate performer):** built and verified end to end against Supabase, MusicBrainz and Orchestrator, including interrupted-run recovery with controlled failure injection (§ 11, § 10).
+- **Readable queue references** `<artist> - <album> | WL-<id>-S<submission>`, persisted once per submission (§ 3): built and verified.
+- Database migrations `2026-10-07_01` and `2026-10-07_02` are **applied** (§ 7). The Orchestrator queues **exist** (§ 6).
+- Development data was **reset** (§ 12): all four queues have no active items, the six original wishlist rows are `new`, submission 1, without generated data. Nothing has been loaded since.
 - **Not** connected to `Main.xaml` / `Framework/Process.xaml`; that is step 3. Until then, items are processed only with the standalone runner `RunValidateBatch.xaml`. No queue triggers are enabled.
 
 **Required build command** (the plain `uip rpa build .` reports the two accepted ST-SEC-009 findings, § 9):
@@ -18,6 +20,8 @@ uip rpa build . --governance-file-type AutomationOps --governance-file-path Gove
 - The analyzer policy matches this Studio version's default rules; regenerate and re-verify it after a Studio or package upgrade (§ 9).
 - Process 20 and later must follow the `Lyrebird_Wishlist` contract (§ 5) and release reservations; `download_attempts` DDL is still missing (§ 7).
 - Step 3 (wiring into `Process.xaml`) is not done.
+- Orchestrator keeps deleted queue items as `Deleted` records; the reset could not remove that history (§ 12).
+- A reference is fixed per submission: correcting a name without a resubmission keeps the old names in the reference (by design, § 3).
 
 ---
 
@@ -25,12 +29,16 @@ uip rpa build . --governance-file-type AutomationOps --governance-file-path Gove
 
 | File | Purpose |
 |---|---|
-| `Workflows/Wishlist/LoadNewWishlistItems.xaml` | Input loader: reads `status = new` wishlist rows (via `GetRows.xaml`) and adds one item per row to `Lyrebird_Validate`. Read-only on Supabase. |
-| `Workflows/Wishlist/BuildValidateQueueItem.xaml` | Pure function: wishlist row → Reference + specific content, or an "invalid" reason. |
+| `Workflows/Wishlist/LoadNewWishlistItems.xaml` | Input loader: reads `status = new` wishlist rows (via `GetRows.xaml`), persists the queue Reference of a new submission, and adds one item per row to `Lyrebird_Validate`. Writes only `queue_reference` to Supabase. |
+| `Workflows/Wishlist/BuildValidateQueueItem.xaml` | Pure function: wishlist row → Reference (stored or newly built) + specific content, or an "invalid" reason. |
+| `Workflows/Wishlist/BuildQueueReference.xaml` | Pure function: the readable Reference rules (§ 3). |
+| `Workflows/Wishlist/PersistQueueReference.xaml` | Guarded PATCH that stores `queue_reference` once per submission (§ 3). |
 | `Workflows/Wishlist/RunValidateBatch.xaml` | **Standalone runner** (until step 3): Get Transaction Item → `ProcessValidateQueueItem` → Set Transaction Status, for up to `in_MaxItems` (1..20) items or exactly one `in_Reference`. |
 | `Workflows/Supabase/GetRows.xaml`, `UpdateRows.xaml` | Supabase helpers (PostgREST). ST-SEC-009 accepted risk (§ 9). |
 | `Governance/Lyrebird_10_DP.analyzer-policy.json` | Versioned analyzer policy for the build, records the ST-SEC-009 exception (§ 9). |
-| `Tests/BuildValidateQueueItemTestCase.xaml`, `LoadNewWishlistItemsDryRunTestCase.xaml` | Offline: payload construction, dry-run counters, duplicate in batch, invalid row, resubmission. |
+| `Tests/BuildValidateQueueItemTestCase.xaml`, `LoadNewWishlistItemsDryRunTestCase.xaml` | Offline: payload construction, dry-run counters, duplicate in batch, invalid row, resubmission, reuse of a stored reference. |
+| `Tests/BuildQueueReferenceTestCase.xaml` + `Tests/Fixtures/BuildQueueReferenceCases.json` | Offline: the Reference rules (12 cases). |
+| `Tests/QueueReferenceIntegrationTestCase.xaml`, `Tests/QueueReferenceLookupIntegrationTestCase.xaml` + `Tests/Fixtures/QueueReferenceLookupCases.json` | **Write to the `_IT` queue** (and one test row): persistence and reuse of the Reference; awkward characters with Add / Get Queue Items / Get Transaction Item (§ 8). |
 | `Tests/SecureStringConversionGuardTestCase.xaml` | Offline: compensating control for the ST-SEC-009 exception (§ 9). |
 | `Tests/LoadNewWishlistItemsIntegrationTestCase.xaml` | **Writes to Orchestrator** (`Lyrebird_Validate_IT`). Run manually only (§ 8). |
 
@@ -46,7 +54,9 @@ Part 2 files: § 11.1.
 | `in_QueueFolder` | In | `Lyrebird` | Orchestrator folder of the queue. Empty = folder the job runs in. |
 | `in_Query` | In | *(empty)* | PostgREST query. Empty = `select=*&status=eq.new&order=id.asc`. |
 | `in_Rows` | In | *(Nothing)* | Rows to load instead of reading Supabase (tests, controlled manual loads). |
-| `in_DryRun` | In | `False` | `True` = build and log every item, send **nothing** to Orchestrator. |
+| `in_DryRun` | In | `False` | `True` = build and log every item, send **nothing** to Orchestrator and store **no** Reference. |
+| `in_PersistReferences` | In | `True` | Store a new Reference on the row before enqueueing. `False` only for synthetic `in_Rows` in tests (the rows don't exist in Supabase). |
+| `out_ChangedCount` | Out | | **Live run only**: rows skipped because they changed (status, submission, deleted) while their Reference was being stored. |
 | `out_AddedCount` | Out | | Items **actually added**. Always 0 in a dry run. |
 | `out_WouldAddCount` | Out | | **Dry run only**: items that would be sent. Not checked against the queue. |
 | `out_AlreadyQueuedCount` | Out | | **Live run only**: confirmed duplicate references rejected by Orchestrator. |
@@ -55,16 +65,37 @@ Part 2 files: § 11.1.
 | `out_AddedReferences` | Out | | References actually added. Empty in a dry run. |
 | `out_WouldAddReferences` | Out | | Dry run only: references that would be sent. |
 
-Per row, exactly one outcome is logged: `ADDED`, `WOULD ADD (dry run, NOT sent)`, `SKIPPED (already in queue)`, `SKIPPED (duplicate in this batch)`, `SKIPPED (invalid)`, or `FAILED` (which stops the load).
-The summary line is `Load wishlist finished … n ADDED, n already in queue (confirmed duplicate reference) …` (or `… DRY RUN finished …`).
+Per row, exactly one outcome is logged: `ADDED`, `WOULD ADD (dry run, NOT sent)`, `SKIPPED (already in queue)`, `SKIPPED (duplicate in this batch)`, `SKIPPED (invalid)`, `SKIPPED (row changed while storing its Reference)`, or `FAILED` (which stops the load).
+The summary line is `Load wishlist finished … n ADDED, n already in queue (confirmed duplicate reference) …, n changed while loading` (or `… DRY RUN finished …`).
 
-The loader does **not** change `status`. A row stays `new` until the performer has processed it, so the loader keeps seeing it; the Reference makes that harmless (§ 3).
+The loader does **not** change `status`; it only writes `queue_reference` (§ 3). A row stays `new` until the performer has processed it, so the loader keeps seeing it; the stored Reference makes that harmless.
 
 ---
 
-## 3. Duplicate handling
+## 3. Queue Reference and duplicate handling
 
-The queue Reference is **`WL-<wishlist id>-S<submission>`**, for example `WL-42-S1`. It contains no artist or album, so fixing a typo does not create a second item for the same row and submission.
+### Format
+
+**`<artist> - <album> | WL-<wishlist id>-S<submission>`**, for example `Björk - Homogenic | WL-17-S3`. The same Reference is used for the `Lyrebird_Validate` item and the `Lyrebird_Wishlist` item of that submission. `WishlistId` and `Submission` stay separate payload fields; nothing parses the Reference.
+
+Rules (`BuildQueueReference.xaml`):
+- the artist and album **as entered on the row** (not the MusicBrainz spelling);
+- control characters and runs of whitespace become one space; names are trimmed;
+- `|` in a name becomes `/`, so ` | WL-` only ever appears as the suffix;
+- the ASCII apostrophe `'` becomes `’`: the Get Queue Items and Get Transaction Item activities put the Reference into an OData filter **without escaping** it, and `Guns N' Roses` breaks that query (`Syntax error at position …`, verified 2026-10-07);
+- at most **128** characters (UTF-16 units). The ` | WL-<id>-S<n>` suffix is never shortened; when needed the names part is cut (never inside a surrogate pair) and ends with `…`.
+
+Verified Orchestrator restrictions (2026-10-07, `Lyrebird_Validate_IT`): 129 characters or more → HTTP 400 `The field Reference must be a string with a maximum length of 128`; uniqueness is **case-insensitive** (an upper-case copy got 409 Duplicate Reference); leading whitespace is trimmed by the server; Unicode, CJK, emoji, `& % # ? + / \ " < > * : ; = [ ] { } ~ ^ ` @ $ « » – … ’` are stored unchanged and can be found with both lookup activities (`QueueReferenceLookupIntegrationTestCase`, 10 cases).
+
+### Persisted once per submission
+
+1. The loader builds the Reference. If the row already holds a `queue_reference` ending with ` | WL-<id>-S<current submission>`, that one is **reused unchanged**, even if the names were corrected since.
+2. Otherwise the loader stores the new Reference on the row **before** adding the item (`PersistQueueReference.xaml`), with a guarded PATCH: `id`, `status=new`, `submission=<n>` and `queue_reference` empty or belonging to another submission. A Reference that belongs to the current submission is therefore never replaced, and two loaders cannot store two different References for one submission (the second one re-reads and uses the stored Reference). If the row changed meanwhile, nothing is enqueued (`SKIPPED (row changed …)`).
+3. The performer requires the item's Reference to equal the row's `queue_reference` (otherwise `BusinessRuleException`, nothing written) and uses it for recovery lookups and for the `Lyrebird_Wishlist` item.
+
+So retries, reloads and recovery always use the same Reference; correcting a name without a resubmission keeps the old names in the Reference (the payload and the row carry the current names).
+
+### Duplicate handling
 
 1. **Orchestrator "Enforce unique references"** on every Lyrebird queue is the real guarantee. It is enforced on the server and works across robots and jobs.
 2. **Duplicate in batch**: the same Reference twice in one load is added once.
@@ -81,14 +112,14 @@ The queue Reference is **`WL-<wishlist id>-S<submission>`**, for example `WL-42-
 
 ## 4. Resubmission contract
 
-**Identity of a request = (wishlist id, submission).** The Reference is derived from it: `WL-<id>-S<submission>`. The column `submission` exists (default 1, `check (submission >= 1)`).
+**Identity of a request = (wishlist id, submission).** The Reference ends with it: `… | WL-<id>-S<submission>` (§ 3). The column `submission` exists (default 1, `check (submission >= 1)`).
 
 | Situation | Submission | Effect |
 |---|---|---|
 | Orchestrator auto-retry of a failed `Lyrebird_Validate` item | **unchanged** | The retry is in the same item's retry chain, with the same Reference. |
 | Loader runs again (schedule, crash, partial load) | **unchanged** | Same Reference, so a confirmed duplicate: `already queued`, nothing added. |
 | Performer re-executes a transaction | **unchanged** | The performer is idempotent (§ 11.5). |
-| **Deliberate resubmission** by the owner (fixed spelling, release chosen, retry after `failed`, input edited) | **+1** | New Reference (`WL-42-S2`), so a new queue item. Old items stay in the queues as history and are ignored (§ 11.5). |
+| **Deliberate resubmission** by the owner (fixed spelling, release chosen, retry after `failed`, input edited) | **+1** | New Reference with the current names (`Radiohead - OK Computer \| WL-42-S2`), stored on the row by the next load, so a new queue item. Old items stay in the queues as history and are ignored (§ 11.5). |
 
 Rules:
 
@@ -106,8 +137,9 @@ Rules:
   where id = 42;
   ```
 - **Any edit of artist, album or preferred format must come with a resubmission.** An edit without one is detected (`updated_at` guard, § 11.5): nothing is overwritten, and the transaction fails as a Business exception asking for a resubmission.
-- Setting `status = 'new'` **without** incrementing has no effect on the queue: the loader reports `already queued`.
-- Deleting queue items is **not** part of this contract. Queue history stays intact.
+- Setting `status = 'new'` **without** incrementing has no effect on the queue: the loader reuses the stored Reference and reports `already queued`.
+- Never edit `queue_reference` by hand; a resubmission replaces it automatically.
+- Deleting queue items is **not** part of this contract. Queue history stays intact (the development reset in § 12 was a one-off, authorized exception).
 
 ---
 
@@ -156,12 +188,13 @@ Dedicated statuses `needs_release_choice` / `duplicate` remain an optional propo
 | `match_score` | 10_DP performer (validated albums) | reporting |
 | `chosen_release_id` | **user**, to resolve `RELEASE_CHOICE` | performer (§ 11.4) |
 | `reserved_release_group` | 10_DP performer: album reservation (unique when not null) | duplicate-album guard (§ 11.6) |
+| `queue_reference` | 10_DP loader, once per submission (max 128) | loader (reuse), performer (must equal the item's Reference; recovery; `Lyrebird_Wishlist` item) (§ 3) |
 
 ### Queue payloads (specific content)
 
 Every queue carries `PayloadVersion` (Int32, currently 1), `WishlistId` (Int64) and `Submission` (Int32). Read numbers with `Convert.ToInt64(...)` / `Convert.ToInt32(...)`, because SpecificContent comes back as JSON.
 
-**`Lyrebird_Validate`** (10_DP loader → 10_DP performer). Reference `WL-<id>-S<submission>`.
+**`Lyrebird_Validate`** (10_DP loader → 10_DP performer). Reference = the row's `queue_reference` (§ 3).
 
 | Field | Type | Source |
 |---|---|---|
@@ -171,7 +204,7 @@ Every queue carries `PayloadVersion` (Int32, currently 1), `WishlistId` (Int64) 
 | `PreferredFormat` | String | `wishlist.preferred_format`, upper case: `FLAC` \| `MP3` \| `ANY` |
 | `Submission` | Int32 | `wishlist.submission` |
 
-**`Lyrebird_Wishlist`** (10_DP performer → 20). Reference `WL-<id>-S<submission>`.
+**`Lyrebird_Wishlist`** (10_DP performer → 20). The same Reference as the Validate item (the row's `queue_reference`).
 
 | Field | Type | Source |
 |---|---|---|
@@ -187,7 +220,7 @@ Every queue carries `PayloadVersion` (Int32, currently 1), `WishlistId` (Int64) 
 
 **Contract for 20 and later steps (not built yet):** act on a `Lyrebird_Wishlist` item only when the row has `status = 'queued'`, `submission` = the item's `Submission` and `mb_release_id` = the item's `MbReleaseId`. Otherwise the item is superseded and must be completed without action. A step that sets the row to `failed` must also set `reserved_release_group = null` (§ 11.6).
 
-**`Lyrebird_Collect`**, **`Lyrebird_Tag`**, **`Lyrebird_Upload`** (20 → 30 → 40 → 50): *proposed*, Reference `WL-<id>-S<submission>-A<attempt id>`.
+**`Lyrebird_Collect`**, **`Lyrebird_Tag`**, **`Lyrebird_Upload`** (20 → 30 → 40 → 50): *proposed*, Reference `<queue_reference>-A<attempt id>` (keep it within 128 characters; not designed yet).
 - Collect: `DownloadAttemptId`, `SoulseekUser`, `RemoteFolder`, `Format`, `TrackCount`, `DownloadStartedUtc`.
 - Tag: `DownloadAttemptId`, `AlbumFolder`, `MbReleaseId`, `TrackCount`, `Format`.
 - Upload: `TaggedFolder`, `FileCount`, `TotalBytes`.
@@ -213,7 +246,13 @@ Permissions used by the robot in folder `Lyrebird`: Queues View; Transactions Vi
 
 ---
 
-## 7. Database migration (applied 2026-10-07)
+## 7. Database migrations (applied 2026-10-07)
+
+### 2026-10-07_02: queue reference
+
+**`Documentation/Migrations/2026-10-07_02_wishlist_queue_reference.sql`** (identical content to `../Lyrebird_00_Shared/DB/migrations/2026-10-07_02_wishlist_queue_reference.sql`). Additive only: column `queue_reference text null`, `check (queue_reference is null or char_length(queue_reference) between 1 and 128)`, column comment, `notify pgrst`. Schema before: `../Lyrebird_00_Shared/DB/snapshots/2026-10-07_wishlist_before_queue_reference.sql`; `wishlist.sql` updated and checked against `pg_dump`. The check deliberately does not involve `submission`, so a resubmission never fails because of an old Reference.
+
+### 2026-10-07_01: part 2
 
 Exact applied script, versioned in this repository: **`Documentation/Migrations/2026-10-07_01_wishlist_part2.sql`** (identical content to `../Lyrebird_00_Shared/DB/migrations/2026-10-07_01_wishlist_part2.sql`, line endings aside; checked against the live schema on 2026-10-07). Additive only; do not run it again:
 
@@ -236,9 +275,19 @@ All integration tests use only the `_IT` queues and dedicated test rows (`messag
 
 | Step | Expected |
 |---|---|
-| 1. Live load of `WL-<ts>-S1` | `added 1` |
+| 1. Live load of `Lyrebird Integration Test - Synthetic <ts> \| WL-<ts>-S1` (`in_PersistReferences = False`) | `added 1` |
 | 2. Same row again | `added 0`, `already queued 1` (409, error 1016, § 3) |
 | 3. Load into a non-existent queue | `OrchestratorHttpException` 404 / 1002 reaches the test, **not** absorbed |
+
+**Reference: `Tests/QueueReferenceIntegrationTestCase.xaml`.** Confirmation `RUN-IT-REFERENCE-<id>`; needs a fresh test row (status `new`, `LYREBIRD_IT` message, no `queue_reference`), ideally with awkward and long names. No MusicBrainz, no performer.
+
+| Step | Expected |
+|---|---|
+| 1. Load the row | `added 1`; `queue_reference` = `BuildQueueReference` of the row, ≤ 128, ends with ` \| WL-<id>-S<n>`; Get Queue Items finds exactly that item; `WishlistId` / `Submission` payload fields correct |
+| 2. Correct the album **without** resubmission, load again | `added 0`, `already queued 1`; `queue_reference` unchanged |
+| 3. Resubmit (submission + 1), load again | `added 1`; new Reference with the corrected album and `S<n+1>`, found in the queue |
+
+**Reference lookup: `Tests/QueueReferenceLookupIntegrationTestCase.xaml`.** Confirmation `RUN-IT-REFERENCE-LOOKUP`; synthetic ids, no wishlist rows. For each name pair in `Tests/Fixtures/QueueReferenceLookupCases.json` it builds the Reference, adds an item, finds it with Get Queue Items (recovery path) and takes it with Get Transaction Item by Reference (runner path), then sets it Successful.
 
 **Part 2, single run: `Tests/ProcessValidateQueueItemIntegrationTestCase.xaml`.** Confirmation `RUN-IT-WISHLIST-<id>`, `in_ExpectedOutcome`. Loads one test row into `Lyrebird_Validate_IT`, takes exactly that item, runs the performer, sets the transaction status, runs the performer again (must be `already_completed`, no second item) and checks the row and the `Lyrebird_Wishlist_IT` item.
 
@@ -262,7 +311,9 @@ uip rpa run --file-path "Tests/ProcessValidateQueueItemIntegrationTestCase.xaml"
   --input-arguments in_Confirmation=RUN-IT-WISHLIST-<id> --input-arguments in_ExpectedOutcome=<outcome> --output json
 ```
 
-Each run needs a fresh test row (or a resubmitted one), because a Reference can be used only once per queue.
+Each run needs a fresh test row (or a resubmitted one), because a Reference can be used only once per queue. For References with non-ASCII characters (for example `RunValidateBatch in_Reference`), pass the arguments with `--input-arguments-file <json>`.
+
+After a test run, remove what it created (§ 12 shows how): delete the test items in the `_IT` queues and the `LYREBIRD_IT` rows; deleting a row also releases its album reservation.
 
 ---
 
@@ -306,21 +357,27 @@ Recommended risk reductions (not done): Supabase behind **HTTPS**; a JWT for a d
 
 ---
 
-## 10. Verification (2026-10-07)
+## 10. Verification (2026-10-07, after the reference change)
 
 | Check | Result |
 |---|---|
+| `uip rpa validate --project-dir .` | 0 diagnostics |
 | `uip rpa build .` with the policy file (§ 9) | **PASS**, 0 errors |
-| Offline: `ParseValidatePayload` (5), `DecideRowAction` (14), `ChooseRelease` (11), `BuildValidationResult` (14) | PASS |
-| Offline: `BuildValidateQueueItem`, `LoadNewWishlistItemsDryRun`, `SecureStringConversionGuard` (44 workflows; conversions only in the two accepted files) | PASS |
-| Part 1 IT (§ 8) | PASS: add, confirmed 409 duplicate (1016), missing queue 404 (1002) surfaced |
-| Part 2 single runs | PASS: `queued` (row 9 S2, idempotent rerun), `duplicate_release` (row 12), `needs_release_choice` (rows 9, 13, 15, 16, 17 first pass), `not_found` (row 20), `check_spelling` (row 21) |
-| Part 2 scenarios | PASS: `crash_after_reservation` (row 15 S3), `crash_after_enqueue` (row 16 S2), `edit_after_enqueue` (row 17 S3), `stale_submission` (row 18), `reservation_conflict` (rows 13/14), `guard_miss_edit` (row 19) |
-| Production load (§ 12) | 6 added; second load 0 added, 6 confirmed duplicates |
-| Production batch (§ 12) | WL-1-S1 `check_spelling`, WL-4-S1 / WL-5-S1 `needs_release_choice`; WL-4-S2 (release chosen) `queued` → `Lyrebird_Wishlist`; rerun found no New item |
-| MusicBrainz throttle | log shows `waiting … ms for the 1 request/second limit` between requests |
+| Offline: `BuildQueueReference` (12), `ParseValidatePayload` (9), `DecideRowAction` (14), `ChooseRelease` (11), `BuildValidationResult` (17) | PASS (63 cases) |
+| Offline: `BuildValidateQueueItem` (5 checks), `LoadNewWishlistItemsDryRun` (3 checks, incl. reuse of a stored reference), `SecureStringConversionGuard` (49 workflows; conversions only in the two accepted files) | PASS |
+| Reference restrictions probe (CLI, `Lyrebird_Validate_IT`) | 128 accepted, 129 → HTTP 400; case-insensitive uniqueness; server trims leading spaces; special characters stored unchanged (§ 3) |
+| `QueueReferenceLookupIntegrationTestCase` | PASS, 10/10 References added, found (Get Queue Items) and taken (Get Transaction Item) |
+| `QueueReferenceIntegrationTestCase` (row 35) | PASS: 127-character shortened Reference persisted before enqueue; corrected album kept it (0 added, 1 already queued); resubmission → new `S2` Reference |
+| Part 1 IT | PASS: readable synthetic Reference added, confirmed 409 duplicate, missing queue 404 (1002) surfaced |
+| Part 2 single runs | PASS, each with an idempotent second run: `queued` (row 23), `duplicate_release` (row 24), `not_found` (row 25), `check_spelling` (row 26), `needs_release_choice` (row 27) |
+| Part 2 scenarios | PASS: `crash_after_reservation` (row 28), `crash_after_enqueue` (row 29, recovered through the readable Reference), `edit_after_enqueue` (row 30), `stale_submission` (row 31), `reservation_conflict` (rows 32/33), `guard_miss_edit` (row 34) |
+| Reference mismatch guard (row 35, `queue_reference` changed by SQL, `RunValidateBatch` on the `_IT` queues) | Failed (Business): "the wishlist row holds queue_reference …"; nothing written |
 
-Found and fixed during testing: Orchestrator **Get Queue Items does not list an item immediately after it was added** (read-after-write delay). `FindQueueItemByReference` now waits (up to `in_WaitUntilFoundSeconds`), and a duplicate add always reads the existing item before anything is persisted (§ 11.5).
+Found and fixed during testing:
+- Orchestrator **Get Queue Items does not list an item immediately after it was added** (read-after-write delay). `FindQueueItemByReference` waits (up to `in_WaitUntilFoundSeconds`), and a duplicate add always reads the existing item before anything is persisted (§ 11.5).
+- **Get Queue Items / Get Transaction Item do not escape `'`** in their Reference filter (OData syntax error). References replace `'` with `’` (§ 3).
+
+All test rows and items were removed afterwards (§ 12).
 
 ---
 
@@ -331,9 +388,9 @@ Found and fixed during testing: Orchestrator **Get Queue Items does not list an 
 | File | Kind | Purpose |
 |---|---|---|
 | `Workflows/Wishlist/ProcessValidateQueueItem.xaml` | orchestration | Processes one QueueItem end to end (§ 11.2). Invoked by `RunValidateBatch.xaml`, **not** by `Process.xaml` yet. |
-| `Workflows/Wishlist/ParseValidatePayload.xaml` | pure | Payload validation, including Reference = `WL-<id>-S<submission>`. |
+| `Workflows/Wishlist/ParseValidatePayload.xaml` | pure | Payload validation; the Reference must end with ` \| WL-<id>-S<submission>` and be at most 128 characters. |
 | `Workflows/Wishlist/DecideRowAction.xaml` | pure | Row decision (`process`, `already_completed`, `stale_submission`, `submission_ahead`, `missing_row`, `unexpected_status`); returns row version, reservation and `chosen_release_id`. |
-| `Workflows/Wishlist/BuildValidationResult.xaml` | pure | Outcome, DB status, message, PATCH body (incl. reservation), `Lyrebird_Wishlist` payload. Throws a System exception for `api_error`. |
+| `Workflows/Wishlist/BuildValidationResult.xaml` | pure | Outcome, DB status, message, PATCH body (incl. reservation), `Lyrebird_Wishlist` payload and Reference (the row's `queue_reference`; `queued` without a valid one throws). Throws a System exception for `api_error`. |
 | `Workflows/Wishlist/ClassifyGuardMiss.xaml` | I/O | After a guarded update hit 0 rows: re-reads the row → `already_persisted`, `superseded`, or `BusinessRuleException` (edited meanwhile). |
 | `Workflows/Wishlist/ReadExistingWishlistItem.xaml` | pure | Reads an existing `Lyrebird_Wishlist` item; `BusinessRuleException` if its `Request*` fields differ from the current row input. |
 | `Workflows/MusicBrainz/ChooseRelease.xaml` | pure | Release-selection policy (§ 11.4). |
@@ -341,7 +398,7 @@ Found and fixed during testing: Orchestrator **Get Queue Items does not list an 
 | `Workflows/MusicBrainz/GetUserAgent.xaml` | I/O | User-Agent from assets (same rules as ValidateAlbum). |
 | `Workflows/Orchestrator/FindQueueItemByReference.xaml` | I/O | Get Queue Items by exact Reference, all states; optional wait until visible. |
 | `Workflows/Orchestrator/AddQueueItemIdempotent.xaml` | I/O | Add Queue Item; only a confirmed duplicate counts as `already_exists`. |
-| `Tests/{ParseValidatePayload,DecideRowAction,ChooseRelease,BuildValidationResult}TestCase.xaml` + `Tests/Fixtures/*.json` | tests | Offline tests (44 cases). |
+| `Tests/{ParseValidatePayload,DecideRowAction,ChooseRelease,BuildValidationResult}TestCase.xaml` + `Tests/Fixtures/*.json` | tests | Offline tests (51 cases; `BuildQueueReference` adds 12). |
 | `Tests/ProcessValidate{QueueItem,Scenario}IntegrationTestCase.xaml` | tests | Integration tests (§ 8). |
 
 Reused: `ValidateAlbum.xaml`, `GetConnection.xaml`, `GetRows.xaml`, `UpdateRows.xaml`. No Invoke Code.
@@ -352,8 +409,8 @@ Reused: `ValidateAlbum.xaml`, `GetConnection.xaml`, `GetRows.xaml`, `UpdateRows.
 2. **Read the row** with `select=*,row_version:updated_at::text&id=eq.<id>` and decide:
    - `missing_row`, `submission_ahead`, `unexpected_status` → `BusinessRuleException`, nothing written.
    - `stale_submission` (the row has a newer submission) or `already_completed` (same submission, status no longer `new`) → done, nothing written.
-   - `process` → continue. The **row** is the source of truth for artist, album and format.
-3. **Recovery check:** if `Lyrebird_Wishlist` already holds `WL-<id>-S<n>`, an earlier attempt enqueued but did not finish. The result is rebuilt from **that item** (no new release choice), but only if its `Request*` fields equal the current row input; otherwise `BusinessRuleException` (§ 11.5).
+   - `process` → continue, but only if the item's Reference equals the row's `queue_reference` (otherwise `BusinessRuleException`, nothing written). The **row** is the source of truth for artist, album and format.
+3. **Recovery check:** if `Lyrebird_Wishlist` already holds an item with this Reference, an earlier attempt enqueued but did not finish. The result is rebuilt from **that item** (no new release choice), but only if its `Request*` fields equal the current row input; otherwise `BusinessRuleException` (§ 11.5).
 4. **Validate:** GetUserAgent → ValidateAlbum (release group) → if validated: GetReleaseGroupReleases + ChooseRelease (§ 11.4) and the duplicate check against active rows (§ 11.6) → BuildValidationResult. `api_error` → System exception (retry), nothing written.
 5. **Claim the album reservation** (outcome `queued` only): guarded PATCH `{"reserved_release_group": <group>}`. A unique violation → `duplicate_release`; 0 rows → the row changed meanwhile (§ 11.5).
 6. **Enqueue** to `Lyrebird_Wishlist` (outcome `queued` only). A confirmed duplicate Reference → wait until the existing item is visible, then finish from its content (same check as step 3).
@@ -418,17 +475,42 @@ Items left behind for an old submission or old input stay in `Lyrebird_Wishlist`
 
 ---
 
-## 12. Production state after the first batch (2026-10-07)
+## 12. Development reset (2026-10-07)
 
-What was done, in order:
-1. Test rows that were still `new` or `queued` (9, 14, 15, 16, 17, 18, 19) were set to `failed` with `message = 'LYREBIRD_IT retired test row … Previous: …'` and their reservations released, so no test row can be loaded into production and no test row blocks a real album.
-2. Loader live run: `WL-1-S1`, `WL-4-S1`, `WL-5-S1`, `WL-6-S1`, `WL-7-S1`, `WL-8-S1` added to `Lyrebird_Validate`. Second run: 0 added, 6 confirmed duplicates.
-3. `RunValidateBatch` with `in_MaxItems = 3`:
-   - `WL-1-S1` (Radiohed / Ok Computr) → `check_spelling` (closest: Radiohead – OK Computer);
-   - `WL-4-S1` (Radiohead / OK Computer) → `needs_release_choice` (17 candidates);
-   - `WL-5-S1` (Pink Floyd / The Dark Side of the Moon) → `needs_release_choice`.
-4. Row 4 resolved as a person would (§ 4): `chosen_release_id = c7569949-0f67-4682-a0d8-75c4290c52dc` (Parlophone CDNODATA 02, 1997-06-16, EMI Swindon CD, 12 tracks), submission 2, status `new`. Loader added `WL-4-S2`; `RunValidateBatch in_Reference=WL-4-S2` → `queued`, item `WL-4-S2` in `Lyrebird_Wishlist` (New). A second run found no New item.
+Authorized one-off cleanup so the owner can rerun from a clean state.
 
-Left for later: `WL-6-S1`, `WL-7-S1`, `WL-8-S1` stay **New** in `Lyrebird_Validate` (rows 6, 7, 8 `new`). Rows 1 and 5 wait for the user (§ 4).
+**Recovery snapshot** (local, no credentials): `C:\Lyrebird_Data\Backups\2026-10-07_dev_reset\`
+- `wishlist_rows.json`, `wishlist_data.sql`: all 19 wishlist rows before the reset;
+- `queue_items_<queue>.json`: all items of the four queues before the reset (specific content, output, status, times);
+- `delete_log.txt`: the result of every delete;
+- `after_tests_*.json`: rows and items created by the tests below, before they were removed.
 
-Run more items: `uip rpa run --file-path "Workflows/Wishlist/RunValidateBatch.xaml" --project-dir . --input-arguments in_MaxItems:=3 --output json` (or `in_Reference=WL-<id>-S<n>`).
+**Deleted**
+- Queue items: every item in `Lyrebird_Validate` (7), `Lyrebird_Wishlist` (1), `Lyrebird_Validate_IT` (19) and `Lyrebird_Wishlist_IT` (6), including Successful and Failed ones. After the tests: the 38 test items and the 14 restriction-probe items.
+- Wishlist rows created by the earlier integration tests: ids 9–21. Evidence per row: an `LYREBIRD_IT` marker or items in the `_IT` queues, created on 2026-10-07 during the test session, and listed as test rows in the earlier version of this document. After the tests: test rows 22–35.
+
+**Not removable:** Orchestrator keeps every deleted item as a record with status **`Deleted`** (`Lyrebird_Validate` 7, `Lyrebird_Wishlist` 1, `Lyrebird_Validate_IT` 65, `Lyrebird_Wishlist_IT` 10), together with its transaction history. The CLI and API cannot remove them; they only go away with the queue (not recreated, as instructed) or through the queue's retention policy (not changed). They are not active work.
+
+**Reset:** wishlist rows 1, 4, 5, 6, 7, 8 (the owner's rows: created before the tests; artist, album and preferred format unchanged) → `status = new`, `submission = 1`; `message`, `mb_artist`, `mb_album`, `mbid`, `track_count`, `match_score`, `mb_release_id`, `mb_artist_id`, `chosen_release_id`, `reserved_release_group` and `queue_reference` empty. There is no separate reservation table; the reservation is the column.
+
+**Kept:** the queue definitions and settings (unique references, retries), all schema additions and both migrations, the Orchestrator assets. No triggers exist and no jobs ran.
+
+**Ready for the owner's fresh run:** all four queues have no active items. A dry run (`in_DryRun = True`: sends and stores nothing) shows the References the first load will create:
+
+```
+Radiohed - Ok Computr | WL-1-S1
+Radiohead - OK Computer | WL-4-S1
+Pink Floyd - The Dark Side of the Moon | WL-5-S1
+Nirvana - Nevermind | WL-6-S1
+Radiohead - asdfghjkl | WL-7-S1
+asdfghjkl - asdfghjkl | WL-8-S1
+```
+
+Fresh run:
+
+```
+uip rpa run --file-path "Workflows/Wishlist/LoadNewWishlistItems.xaml" --project-dir . --output json
+uip rpa run --file-path "Workflows/Wishlist/RunValidateBatch.xaml" --project-dir . --input-arguments in_MaxItems:=3 --output json
+```
+
+The release choice from the earlier run (row 4, `c7569949-…`) was reset with everything else; every real album will again need `chosen_release_id` once (§ 11.4).

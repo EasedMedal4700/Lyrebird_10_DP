@@ -1,0 +1,241 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Tests_QueueReferenceIntegrationTestCase" this:Tests_QueueReferenceIntegrationTestCase.in_QueueFolder="Lyrebird" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uta="clr-namespace:UiPath.Testing.Activities;assembly=UiPath.Testing.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="REQUIRED. Dedicated test input queue; name must end with _IT (e.g. Lyrebird_Validate_IT)." Name="in_ValidateTestQueue" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the test queue. Default Lyrebird." Name="in_QueueFolder" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="REQUIRED. A fresh test wishlist row: status 'new', message starting with 'LYREBIRD_IT', queue_reference empty. Use names with special characters / a long album to exercise the reference rules." Name="in_TestWishlistId" Type="InArgument(x:Int64)" />
+    <x:Property sap2010:Annotation.AnnotationText="REQUIRED. Must be exactly RUN-IT-REFERENCE-&lt;in_TestWishlistId&gt;." Name="in_Confirmation" Type="InArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Testing</x:String>
+      <x:String>UiPath.Testing.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Testing</AssemblyReference>
+      <AssemblyReference>UiPath.Testing.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="CONTROLLED INTEGRATION TEST of the readable queue Reference. WRITES to Orchestrator (the _IT test queue only) and to Supabase (ONLY the supplied LYREBIRD_IT row). No MusicBrainz calls, no performer.&#xA;&#xA;1. Load the row: the loader persists queue_reference (= BuildQueueReference of the row, max 128) BEFORE adding the item; Get Queue Items finds the item by that exact Reference; WishlistId and Submission stay separate payload fields.&#xA;2. Correct the names WITHOUT resubmission and load again: the Reference is reused unchanged and Orchestrator rejects the duplicate (0 added, 1 already queued).&#xA;3. Resubmit (submission + 1) and load again: a new Reference with the corrected names and the new submission is persisted and added." DisplayName="QueueReferenceIntegrationTestCase" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="scg:List(x:String)" Name="GuardProblems" />
+      <Variable x:TypeArguments="njl:JArray" Name="RowsTmp" />
+      <Variable x:TypeArguments="njl:JObject" Name="Row0" />
+      <Variable x:TypeArguments="njl:JObject" Name="Row1" />
+      <Variable x:TypeArguments="njl:JObject" Name="Row2" />
+      <Variable x:TypeArguments="njl:JObject" Name="Row3" />
+      <Variable x:TypeArguments="x:Int32" Name="Submission0" />
+      <Variable x:TypeArguments="x:String" Name="ExpectedRef1" />
+      <Variable x:TypeArguments="x:String" Name="ExpectedRef3" />
+      <Variable x:TypeArguments="x:String" Name="CorrectedAlbum" />
+      <Variable x:TypeArguments="x:Boolean" Name="DiscardBool" />
+      <Variable x:TypeArguments="x:Int32" Name="Added1" />
+      <Variable x:TypeArguments="x:Int32" Name="Added2" />
+      <Variable x:TypeArguments="x:Int32" Name="AlreadyQueued2" />
+      <Variable x:TypeArguments="x:Int32" Name="Added3" />
+      <Variable x:TypeArguments="x:Int32" Name="DiscardInt" />
+      <Variable x:TypeArguments="scg:List(x:String)" Name="DiscardList" />
+      <Variable x:TypeArguments="njl:JArray" Name="DiscardRows" />
+      <Variable x:TypeArguments="x:Boolean" Name="Found1" />
+      <Variable x:TypeArguments="x:Int32" Name="Count1" />
+      <Variable x:TypeArguments="scg:Dictionary(x:String, x:Object)" Name="Content1" />
+      <Variable x:TypeArguments="x:String" Name="DiscardString" />
+      <Variable x:TypeArguments="x:Boolean" Name="Found3" />
+      <Variable x:TypeArguments="x:Int32" Name="Count3" />
+      <Variable x:TypeArguments="scg:Dictionary(x:String, x:Object)" Name="Content3" />
+      <Variable x:TypeArguments="x:String" Name="Ref1" />
+      <Variable x:TypeArguments="x:String" Name="Ref2" />
+      <Variable x:TypeArguments="x:String" Name="Ref3" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="... Given: safeguards" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign GuardProblems (arguments)" sap2010:WorkflowViewState.IdRef="Assign_1" To="[GuardProblems]" Value="[{If(in_TestWishlistId &gt; 0, Nothing, &quot;in_TestWishlistId is missing&quot;), If(Not String.IsNullOrWhiteSpace(in_ValidateTestQueue) AndAlso in_ValidateTestQueue.Trim().EndsWith(&quot;_IT&quot;, StringComparison.OrdinalIgnoreCase), Nothing, $&quot;in_ValidateTestQueue '{in_ValidateTestQueue}' is not a test queue (_IT)&quot;), If(in_Confirmation = $&quot;RUN-IT-REFERENCE-{in_TestWishlistId}&quot;, Nothing, $&quot;in_Confirmation must be RUN-IT-REFERENCE-{in_TestWishlistId}&quot;)}.Where(Function(p) p IsNot Nothing).ToList()]" />
+      <If Condition="[GuardProblems.Count &gt; 0]" DisplayName="If arguments are not safe" sap2010:WorkflowViewState.IdRef="If_1">
+        <If.Then>
+          <Throw DisplayName="Throw refused (arguments)" Exception="[New InvalidOperationException(&quot;Reference test refused - nothing was read or written: &quot; &amp; String.Join(&quot;; &quot;, GuardProblems))]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </If.Then>
+      </If>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows test row (before)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*&amp;id=eq.{in_TestWishlistId}"]</InArgument>
+          <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[RowsTmp]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Row0" sap2010:WorkflowViewState.IdRef="Assign_2" To="[Row0]" Value="[If(RowsTmp Is Nothing OrElse RowsTmp.Count = 0, Nothing, TryCast(RowsTmp(0), JObject))]" />
+      <If Condition="[Row0 Is Nothing OrElse Row0.Value(Of String)(&quot;status&quot;) &lt;&gt; &quot;new&quot; OrElse Not If(Row0.Value(Of String)(&quot;message&quot;), String.Empty).StartsWith(&quot;LYREBIRD_IT&quot;, StringComparison.Ordinal) OrElse Not String.IsNullOrEmpty(Row0.Value(Of String)(&quot;queue_reference&quot;))]" DisplayName="If the row is not a fresh test row" sap2010:WorkflowViewState.IdRef="If_2">
+        <If.Then>
+          <Throw DisplayName="Throw refused (row)" Exception="[New InvalidOperationException($&quot;Reference test refused - nothing was written: row {in_TestWishlistId} must exist with status 'new', a message starting with 'LYREBIRD_IT' and no queue_reference.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_2" />
+        </If.Then>
+      </If>
+      <Assign x:TypeArguments="x:Int32" DisplayName="Assign Submission0" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Submission0]" Value="[Row0.Value(Of Integer)(&quot;submission&quot;)]" />
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildQueueReference (expected, step 1)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Wishlist\BuildQueueReference.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Artist">[Row0.Value(Of String)("artist")]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Album">[Row0.Value(Of String)("album")]</InArgument>
+          <InArgument x:TypeArguments="x:Int64" x:Key="in_WishlistId">[in_TestWishlistId]</InArgument>
+          <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[Submission0]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_StoredReference">[String.Empty]</InArgument>
+          <OutArgument x:TypeArguments="x:String" x:Key="out_Reference">[ExpectedRef1]</OutArgument>
+          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_IsStored">[DiscardBool]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:LogMessage DisplayName="Log start" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;Reference test: row {in_TestWishlistId} ('{Row0.Value(Of String)(&quot;artist&quot;)}' - '{Row0.Value(Of String)(&quot;album&quot;)}', S{Submission0}); expected Reference '{ExpectedRef1}' ({ExpectedRef1.Length} chars); queue {in_ValidateTestQueue}.&quot;]" />
+    </Sequence>
+    <Sequence DisplayName="... When/Then 1: first load persists the Reference before enqueueing" sap2010:WorkflowViewState.IdRef="Sequence_3">
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke LoadNewWishlistItems (load 1)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_3" UnSafe="False" WorkflowFileName="Workflows\Wishlist\LoadNewWishlistItems.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_ValidateTestQueue]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*&amp;id=eq.{in_TestWishlistId}"]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[Added1]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows test row (after load 1)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_4" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*&amp;id=eq.{in_TestWishlistId}"]</InArgument>
+          <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[RowsTmp]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Row1" sap2010:WorkflowViewState.IdRef="Assign_4" To="[Row1]" Value="[CType(RowsTmp(0), JObject)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign Ref1" sap2010:WorkflowViewState.IdRef="Assign_5" To="[Ref1]" Value="[If(Row1.Value(Of String)(&quot;queue_reference&quot;), String.Empty)]" />
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke FindQueueItemByReference (Ref1)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_5" UnSafe="False" WorkflowFileName="Workflows\Orchestrator\FindQueueItemByReference.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_ValidateTestQueue]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Reference">[Ref1]</InArgument>
+          <InArgument x:TypeArguments="x:Int32" x:Key="in_WaitUntilFoundSeconds">[15]</InArgument>
+          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_Found">[Found1]</OutArgument>
+          <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_SpecificContent">[Content1]</OutArgument>
+          <OutArgument x:TypeArguments="x:String" x:Key="out_Status">[DiscardString]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_Count">[Count1]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+    </Sequence>
+    <Sequence DisplayName="... When/Then 2: corrected names without resubmission keep the Reference" sap2010:WorkflowViewState.IdRef="Sequence_4">
+      <Assign x:TypeArguments="x:String" DisplayName="Assign CorrectedAlbum" sap2010:WorkflowViewState.IdRef="Assign_6" To="[CorrectedAlbum]" Value="[&quot;Corrected &quot; &amp; Row1.Value(Of String)(&quot;album&quot;)]" />
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke UpdateRows (correct album, no resubmission)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_6" UnSafe="False" WorkflowFileName="Workflows\Supabase\UpdateRows.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Filter">[$"id=eq.{in_TestWishlistId}&amp;status=eq.new&amp;message=like.LYREBIRD_IT*"]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_JsonBody">[New JObject(New JProperty("album", CorrectedAlbum)).ToString(Newtonsoft.Json.Formatting.None)]</InArgument>
+          <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[DiscardRows]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke LoadNewWishlistItems (load 2)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_7" UnSafe="False" WorkflowFileName="Workflows\Wishlist\LoadNewWishlistItems.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_ValidateTestQueue]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*&amp;id=eq.{in_TestWishlistId}"]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[Added2]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AlreadyQueuedCount">[AlreadyQueued2]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows test row (after load 2)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_8" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*&amp;id=eq.{in_TestWishlistId}"]</InArgument>
+          <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[RowsTmp]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Row2" sap2010:WorkflowViewState.IdRef="Assign_7" To="[Row2]" Value="[CType(RowsTmp(0), JObject)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign Ref2" sap2010:WorkflowViewState.IdRef="Assign_8" To="[Ref2]" Value="[If(Row2.Value(Of String)(&quot;queue_reference&quot;), String.Empty)]" />
+    </Sequence>
+    <Sequence DisplayName="... When/Then 3: resubmission gets a new Reference" sap2010:WorkflowViewState.IdRef="Sequence_5">
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke UpdateRows (resubmit: submission + 1)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_9" UnSafe="False" WorkflowFileName="Workflows\Supabase\UpdateRows.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Filter">[$"id=eq.{in_TestWishlistId}&amp;status=eq.new&amp;message=like.LYREBIRD_IT*&amp;submission=eq.{Submission0}"]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_JsonBody">[New JObject(New JProperty("submission", Submission0 + 1)).ToString(Newtonsoft.Json.Formatting.None)]</InArgument>
+          <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[DiscardRows]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildQueueReference (expected, step 3)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_10" UnSafe="False" WorkflowFileName="Workflows\Wishlist\BuildQueueReference.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Artist">[Row2.Value(Of String)("artist")]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Album">[CorrectedAlbum]</InArgument>
+          <InArgument x:TypeArguments="x:Int64" x:Key="in_WishlistId">[in_TestWishlistId]</InArgument>
+          <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[Submission0 + 1]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_StoredReference">[String.Empty]</InArgument>
+          <OutArgument x:TypeArguments="x:String" x:Key="out_Reference">[ExpectedRef3]</OutArgument>
+          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_IsStored">[DiscardBool]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke LoadNewWishlistItems (load 3)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_11" UnSafe="False" WorkflowFileName="Workflows\Wishlist\LoadNewWishlistItems.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_ValidateTestQueue]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*&amp;id=eq.{in_TestWishlistId}"]</InArgument>
+          <InArgument x:TypeArguments="x:Boolean" x:Key="in_DryRun">[False]</InArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_AddedCount">[Added3]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows test row (after load 3)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_12" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*&amp;id=eq.{in_TestWishlistId}"]</InArgument>
+          <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[RowsTmp]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Row3" sap2010:WorkflowViewState.IdRef="Assign_9" To="[Row3]" Value="[CType(RowsTmp(0), JObject)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign Ref3" sap2010:WorkflowViewState.IdRef="Assign_10" To="[Ref3]" Value="[If(Row3.Value(Of String)(&quot;queue_reference&quot;), String.Empty)]" />
+      <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke FindQueueItemByReference (Ref3)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_13" UnSafe="False" WorkflowFileName="Workflows\Orchestrator\FindQueueItemByReference.xaml">
+        <ui:InvokeWorkflowFile.Arguments>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueName">[in_ValidateTestQueue]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+          <InArgument x:TypeArguments="x:String" x:Key="in_Reference">[Ref3]</InArgument>
+          <InArgument x:TypeArguments="x:Int32" x:Key="in_WaitUntilFoundSeconds">[15]</InArgument>
+          <OutArgument x:TypeArguments="x:Boolean" x:Key="out_Found">[Found3]</OutArgument>
+          <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_SpecificContent">[Content3]</OutArgument>
+          <OutArgument x:TypeArguments="x:String" x:Key="out_Status">[DiscardString]</OutArgument>
+          <OutArgument x:TypeArguments="x:Int32" x:Key="out_Count">[Count3]</OutArgument>
+        </ui:InvokeWorkflowFile.Arguments>
+      </ui:InvokeWorkflowFile>
+    </Sequence>
+    <Sequence DisplayName="... Then: verify" sap2010:WorkflowViewState.IdRef="Sequence_6">
+      <ui:LogMessage DisplayName="Log evidence" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;REFERENCE TEST evidence: load1 added {Added1}, Ref1 '{Ref1}' ({Ref1.Length} chars, expected '{ExpectedRef1}'), item found {Found1}/{Count1}, WishlistId {If(Content1 Is Nothing, &quot;-&quot;, Convert.ToString(Content1(&quot;WishlistId&quot;)))}, Submission {If(Content1 Is Nothing, &quot;-&quot;, Convert.ToString(Content1(&quot;Submission&quot;)))} | load2 (album corrected to '{CorrectedAlbum}') added {Added2}, already queued {AlreadyQueued2}, Ref2 '{Ref2}' | load3 (S{Submission0 + 1}) added {Added3}, Ref3 '{Ref3}' (expected '{ExpectedRef3}'), item found {Found3}/{Count3}, Submission {If(Content3 Is Nothing, &quot;-&quot;, Convert.ToString(Content3(&quot;Submission&quot;)))}&quot;]" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify step 1: Reference persisted, valid and findable" Expression="[Added1 = 1 AndAlso Ref1 = ExpectedRef1 AndAlso Ref1.Length &lt;= 128 AndAlso Ref1.EndsWith($&quot; | WL-{in_TestWishlistId}-S{Submission0}&quot;, StringComparison.Ordinal) AndAlso Found1 AndAlso Count1 = 1 AndAlso Convert.ToInt64(Content1(&quot;WishlistId&quot;)) = in_TestWishlistId AndAlso Convert.ToInt32(Content1(&quot;Submission&quot;)) = Submission0]" sap2010:WorkflowViewState.IdRef="VerifyExpression_1" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify step 2: corrected names reuse the Reference" Expression="[Added2 = 0 AndAlso AlreadyQueued2 = 1 AndAlso Ref2 = Ref1 AndAlso Row2.Value(Of String)(&quot;album&quot;) = CorrectedAlbum]" sap2010:WorkflowViewState.IdRef="VerifyExpression_2" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify step 3: resubmission gets a new Reference" Expression="[Added3 = 1 AndAlso Ref3 = ExpectedRef3 AndAlso Ref3 &lt;&gt; Ref1 AndAlso Ref3.EndsWith($&quot; | WL-{in_TestWishlistId}-S{Submission0 + 1}&quot;, StringComparison.Ordinal) AndAlso Found3 AndAlso Count3 = 1 AndAlso Convert.ToInt32(Content3(&quot;Submission&quot;)) = Submission0 + 1]" sap2010:WorkflowViewState.IdRef="VerifyExpression_3" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+    </Sequence>
+  </Sequence>
+</Activity>

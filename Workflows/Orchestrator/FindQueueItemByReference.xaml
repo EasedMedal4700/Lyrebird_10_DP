@@ -1,4 +1,4 @@
-<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Orchestrator_FindQueueItemByReference" this:Workflows_Orchestrator_FindQueueItemByReference.in_WaitUntilFoundSeconds="0" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:this="clr-namespace:" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Orchestrator_FindQueueItemByReference" this:Workflows_Orchestrator_FindQueueItemByReference.in_WaitUntilFoundSeconds="0" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
   <x:Members>
     <x:Property Name="in_QueueName" Type="InArgument(x:String)" />
     <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of the queue. Empty = folder the job runs in." Name="in_QueueFolder" Type="InArgument(x:String)" />
@@ -24,6 +24,7 @@
       <x:String>System.Activities.Expressions</x:String>
       <x:String>System.Activities.Statements</x:String>
       <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
       <x:String>System.Linq</x:String>
       <x:String>UiPath.Core</x:String>
       <x:String>UiPath.Core.Activities</x:String>
@@ -43,6 +44,7 @@
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
       <AssemblyReference>System.ObjectModel</AssemblyReference>
       <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
   <Sequence sap2010:Annotation.AnnotationText="Looks up queue items by exact Reference (all states). Read-only. Used to recover after a partial failure: when the Lyrebird_Wishlist item already exists, its content is the record of what was decided.&#xA;Several items can share a Reference (Orchestrator retries); the newest retry is returned - they carry the same content." DisplayName="Find Queue Item By Reference" sap2010:WorkflowViewState.IdRef="Sequence_1">
@@ -59,10 +61,10 @@
     </sap:WorkflowViewStateService.ViewState>
     <Assign x:TypeArguments="x:String" DisplayName="Assign QueueFolder" sap2010:WorkflowViewState.IdRef="Assign_1" To="[QueueFolder]" Value="[If(String.IsNullOrWhiteSpace(in_QueueFolder), Nothing, in_QueueFolder.Trim())]" />
     <Assign x:TypeArguments="s:DateTime" DisplayName="Assign Deadline" sap2010:WorkflowViewState.IdRef="Assign_7" To="[Deadline]" Value="[DateTime.UtcNow.AddSeconds(Math.Max(0, in_WaitUntilFoundSeconds))]" />
-    <ui:InterruptibleDoWhile sap2010:Annotation.AnnotationText="Read-after-write delay: Get Queue Items may not list an item that was added a moment ago (observed in the integration tests)." DisplayName="Do While not found and waiting allowed" sap2010:WorkflowViewState.IdRef="InterruptibleDoWhile_1">
+    <ui:InterruptibleDoWhile CurrentIndex="{x:Null}" sap2010:Annotation.AnnotationText="Read-after-write delay: Get Queue Items may not list an item that was added a moment ago (observed in the integration tests)." Condition="[Item Is Nothing AndAlso DateTime.UtcNow &lt; Deadline]" DisplayName="Do While not found and waiting allowed" sap2010:WorkflowViewState.IdRef="InterruptibleDoWhile_1">
       <ui:InterruptibleDoWhile.Body>
         <Sequence DisplayName="Body" sap2010:WorkflowViewState.IdRef="Sequence_2">
-          <ui:GetQueueItems Duration="{x:Null}" From="{x:Null}" Priority="{x:Null}" Skip="{x:Null}" TimeoutMS="{x:Null}" To="{x:Null}" DisplayName="Get queue items by Reference" FilterStrategy="Equals" FolderPath="[QueueFolder]" QueueItemStates="All" QueueName="[in_QueueName]" Reference="[in_Reference]" Result="[Items]" Top="[10]" sap2010:WorkflowViewState.IdRef="GetQueueItems_1" />
+          <ui:GetQueueItems Duration="{x:Null}" From="{x:Null}" Priority="{x:Null}" Skip="{x:Null}" TimeoutMS="{x:Null}" To="{x:Null}" DisplayName="Get queue items by Reference" FilterStrategy="Equals" FolderPath="[QueueFolder]" sap2010:WorkflowViewState.IdRef="GetQueueItems_1" QueueItemStates="All" QueueName="[in_QueueName]" Reference="[in_Reference]" Result="[Items]" Top="[10]" />
           <Assign x:TypeArguments="ui:QueueItem" DisplayName="Assign Item" sap2010:WorkflowViewState.IdRef="Assign_2" To="[Item]" Value="[If(Items Is Nothing, Nothing, Items.Where(Function(i) String.Equals(i.Reference, in_Reference, StringComparison.OrdinalIgnoreCase)).OrderByDescending(Function(i) i.RetryNo).FirstOrDefault())]" />
           <If Condition="[Item Is Nothing AndAlso DateTime.UtcNow &lt; Deadline]" DisplayName="If not visible yet" sap2010:WorkflowViewState.IdRef="If_1">
             <If.Then>
@@ -73,7 +75,6 @@
           </If>
         </Sequence>
       </ui:InterruptibleDoWhile.Body>
-      <ui:InterruptibleDoWhile.Condition>[Item Is Nothing AndAlso DateTime.UtcNow &lt; Deadline]</ui:InterruptibleDoWhile.Condition>
     </ui:InterruptibleDoWhile>
     <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_Count" sap2010:WorkflowViewState.IdRef="Assign_6" To="[out_Count]" Value="[If(Items Is Nothing, 0, Items.Count(Function(i) String.Equals(i.Reference, in_Reference, StringComparison.OrdinalIgnoreCase)))]" />
     <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_Found" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_Found]" Value="[Item IsNot Nothing]" />

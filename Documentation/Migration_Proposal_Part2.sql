@@ -8,6 +8,7 @@
 --   Migrations/2026-10-07_01_wishlist_part2.sql (exact applied script, this repo)
 --   = ../../Lyrebird_00_Shared/DB/migrations/2026-10-07_01_wishlist_part2.sql
 -- and Lyrebird_DataContract.md section 7.
+-- ALSO APPLIED: queue_reference (Migrations/2026-10-07_02_wishlist_queue_reference.sql).
 --
 -- The earlier proposal for a unique index on mbid for active statuses is
 -- replaced by the applied reservation column (claimed BEFORE enqueue).

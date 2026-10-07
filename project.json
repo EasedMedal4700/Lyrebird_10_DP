@@ -154,6 +154,27 @@
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
         "fileName": "Tests\\ProcessValidateScenarioIntegrationTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "56928086-6f00-4daf-bdb2-645cd5a375df",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "TestsBuildQueueReferenceTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "91788e57-a008-4a7b-9fc3-de9f42780be9",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "TestsQueueReferenceIntegrationTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "de6253a4-65dd-4b08-868b-7968e3407636",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "TestsQueueReferenceLookupIntegrationTestCase.xaml"
       }
     ],
     "saveToCloud": false

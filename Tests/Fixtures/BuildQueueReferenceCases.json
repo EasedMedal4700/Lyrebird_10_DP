@@ -1,0 +1,143 @@
+[
+  {
+    "name": "basic",
+    "artist": "Radiohead",
+    "album": "OK Computer",
+    "wishlistId": 17,
+    "submission": 3,
+    "stored": null,
+    "expect": {
+      "reference": "Radiohead - OK Computer | WL-17-S3",
+      "isStored": false
+    }
+  },
+  {
+    "name": "stored reference of this submission is reused although the names were corrected",
+    "artist": "Radiohead",
+    "album": "OK Computer",
+    "wishlistId": 17,
+    "submission": 3,
+    "stored": "Radiohed - Ok Computr | WL-17-S3",
+    "expect": {
+      "reference": "Radiohed - Ok Computr | WL-17-S3",
+      "isStored": true
+    }
+  },
+  {
+    "name": "stored reference of an earlier submission is replaced",
+    "artist": "Radiohead",
+    "album": "OK Computer",
+    "wishlistId": 17,
+    "submission": 3,
+    "stored": "Radiohed - Ok Computr | WL-17-S2",
+    "expect": {
+      "reference": "Radiohead - OK Computer | WL-17-S3",
+      "isStored": false
+    }
+  },
+  {
+    "name": "stored reference of another row is replaced",
+    "artist": "Radiohead",
+    "album": "OK Computer",
+    "wishlistId": 17,
+    "submission": 3,
+    "stored": "Radiohead - OK Computer | WL-117-S3",
+    "expect": {
+      "reference": "Radiohead - OK Computer | WL-17-S3",
+      "isStored": false
+    }
+  },
+  {
+    "name": "old WL-only reference is replaced",
+    "artist": "Radiohead",
+    "album": "OK Computer",
+    "wishlistId": 17,
+    "submission": 3,
+    "stored": "WL-17-S3",
+    "expect": {
+      "reference": "Radiohead - OK Computer | WL-17-S3",
+      "isStored": false
+    }
+  },
+  {
+    "name": "whitespace and control characters collapse to one space",
+    "artist": "  Massive \t Attack ",
+    "album": "Mezzanine\n",
+    "wishlistId": 9,
+    "submission": 1,
+    "stored": "",
+    "expect": {
+      "reference": "Massive Attack - Mezzanine | WL-9-S1",
+      "isStored": false
+    }
+  },
+  {
+    "name": "pipe in names becomes slash",
+    "artist": "A|B",
+    "album": "C | D",
+    "wishlistId": 1,
+    "submission": 1,
+    "stored": null,
+    "expect": {
+      "reference": "A/B - C / D | WL-1-S1"
+    }
+  },
+  {
+    "name": "unicode and punctuation are kept; ASCII apostrophe becomes ’",
+    "artist": "Björk",
+    "album": "Guns N' Roses & \"Co\" #1?",
+    "wishlistId": 17,
+    "submission": 3,
+    "stored": null,
+    "expect": {
+      "reference": "Björk - Guns N’ Roses & \"Co\" #1? | WL-17-S3"
+    }
+  },
+  {
+    "name": "exactly 128 characters is not shortened",
+    "artist": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB",
+    "album": "CCCCCCCCCC",
+    "wishlistId": 5,
+    "submission": 1,
+    "stored": null,
+    "expect": {
+      "reference": "BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB - CCCCCCCCCC | WL-5-S1",
+      "length": 128
+    }
+  },
+  {
+    "name": "long names are shortened to 128 with an ellipsis, suffix intact",
+    "artist": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX",
+    "album": "YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY",
+    "wishlistId": 123456,
+    "submission": 12,
+    "stored": null,
+    "expect": {
+      "reference": "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX - YYYYYYYY… | WL-123456-S12",
+      "length": 128
+    }
+  },
+  {
+    "name": "never cut inside a surrogate pair",
+    "artist": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    "album": "🎵ZZZZZZZZZZZZZZZZZZZZ",
+    "wishlistId": 1,
+    "submission": 1,
+    "stored": null,
+    "expect": {
+      "reference": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA -… | WL-1-S1",
+      "length": 126
+    }
+  },
+  {
+    "name": "invalid id throws",
+    "artist": "A",
+    "album": "B",
+    "wishlistId": 0,
+    "submission": 1,
+    "stored": null,
+    "expect": {
+      "exception": "ArgumentException"
+    }
+  }
+]
