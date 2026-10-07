@@ -1,0 +1,54 @@
+[
+  { "name": "single original-year official release chosen; later deluxe and earlier bootleg ignored",
+    "releases": [
+      { "id": "rel-a1", "status": "Official", "date": "1997-05-21", "country": "GB", "media": [ { "track-count": 12 } ] },
+      { "id": "rel-c3", "status": "Official", "date": "2017-06-23", "country": "XW", "media": [ { "track-count": 12 }, { "track-count": 11 } ] },
+      { "id": "rel-d4", "status": "Bootleg", "date": "1996", "country": "XE", "media": [ { "track-count": 10 } ] }
+    ],
+    "expect": { "ambiguous": false, "releaseId": "rel-a1", "trackCount": 12, "reasonContains": "Only official release of the original year" } },
+  { "name": "two original-year releases with EQUAL track counts: ambiguous (no tie-breaker)",
+    "releases": [
+      { "id": "rel-b2", "status": "Official", "date": "1997-07-01", "country": "US", "media": [ { "track-count": 12 } ] },
+      { "id": "rel-a1", "status": "Official", "date": "1997-05-21", "country": "GB", "media": [ { "track-count": 12 } ] }
+    ],
+    "expect": { "ambiguous": true, "releaseId": "", "trackCount": 0, "reasonContains": "2 official releases in the original year (1997)" } },
+  { "name": "original year has a bonus-track edition: ambiguous",
+    "releases": [
+      { "id": "rel-e1", "status": "Official", "date": "1997-05-21", "country": "GB", "media": [ { "track-count": 12 } ] },
+      { "id": "rel-e2", "status": "Official", "date": "1997-05-28", "country": "JP", "media": [ { "track-count": 13 } ] }
+    ],
+    "expect": { "ambiguous": true, "releaseId": "", "trackCount": 0, "reasonContains": "set chosen_release_id to one of" } },
+  { "name": "multi-disc single release: track counts are summed",
+    "releases": [ { "id": "rel-f1", "status": "Official", "date": "1979-11-30", "country": "GB", "media": [ { "track-count": 13 }, { "track-count": 13 } ] } ],
+    "expect": { "ambiguous": false, "releaseId": "rel-f1", "trackCount": 26 } },
+  { "name": "no official release: ambiguous",
+    "releases": [ { "id": "rel-g1", "status": "Promotion", "date": "2001", "media": [ { "track-count": 10 } ] } ],
+    "expect": { "ambiguous": true, "reasonContains": "No official release" } },
+  { "name": "no dates, two official releases: ambiguous",
+    "releases": [
+      { "id": "rel-h2", "status": "Official", "media": [ { "track-count": 9 } ] },
+      { "id": "rel-h1", "status": "Official", "media": [ { "track-count": 9 } ] }
+    ],
+    "expect": { "ambiguous": true, "reasonContains": "(no release dates)" } },
+  { "name": "year-only and full date in the same year: ambiguous",
+    "releases": [
+      { "id": "rel-j1", "status": "Official", "date": "1999-03-01", "media": [ { "track-count": 10 } ] },
+      { "id": "rel-j2", "status": "Official", "date": "1999", "media": [ { "track-count": 10 } ] }
+    ],
+    "expect": { "ambiguous": true } },
+  { "name": "empty list: ambiguous", "releases": [], "expect": { "ambiguous": true } },
+  { "name": "single official release without track count: ambiguous",
+    "releases": [ { "id": "rel-k1", "status": "Official", "date": "2000", "media": [] } ],
+    "expect": { "ambiguous": true, "reasonContains": "has no track count" } },
+  { "name": "chosen_release_id selects that release, even among several",
+    "chosenReleaseId": "REL-E2",
+    "releases": [
+      { "id": "rel-e1", "status": "Official", "date": "1997-05-21", "country": "GB", "media": [ { "track-count": 12 } ] },
+      { "id": "rel-e2", "status": "Official", "date": "1997-05-28", "country": "JP", "media": [ { "track-count": 13 } ] }
+    ],
+    "expect": { "ambiguous": false, "releaseId": "rel-e2", "trackCount": 13, "reasonContains": "chosen by a person" } },
+  { "name": "chosen_release_id not in this release group: ambiguous",
+    "chosenReleaseId": "rel-zz",
+    "releases": [ { "id": "rel-e1", "status": "Official", "date": "1997-05-21", "media": [ { "track-count": 12 } ] } ],
+    "expect": { "ambiguous": true, "reasonContains": "is not one of the 1 release(s)" } }
+]

@@ -1,0 +1,196 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_RunValidateBatch" this:Workflows_Wishlist_RunValidateBatch.in_ValidateQueueName="Lyrebird_Validate" this:Workflows_Wishlist_RunValidateBatch.in_WishlistQueueName="Lyrebird_Wishlist" this:Workflows_Wishlist_RunValidateBatch.in_QueueFolder="Lyrebird" this:Workflows_Wishlist_RunValidateBatch.in_MaxItems="1" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Input queue. Default Lyrebird_Validate." Name="in_ValidateQueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Output queue for queued albums. Default Lyrebird_Wishlist." Name="in_WishlistQueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Orchestrator folder of both queues. Default Lyrebird." Name="in_QueueFolder" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Maximum number of items to process in this run, 1..20. Default 1 (small, documented batches)." Name="in_MaxItems" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional. When set, process only the New item with exactly this Reference (e.g. WL-4-S1) and stop." Name="in_Reference" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Number of items taken from the input queue." Name="out_ProcessedCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="One line per item: Reference, transaction status, outcome or exception, message." Name="out_Summary" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>UiPath.UiAutomation.Activities</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Standalone runner for part 2 until the performer is wired into Main.xaml / Framework\Process.xaml (step 3). Takes up to in_MaxItems New items from the input queue, runs ProcessValidateQueueItem on each and sets the transaction status: Successful when the performer returns, Failed/Business on BusinessRuleException, Failed/Application on any other exception (the queue's auto retry then makes a new attempt). Writes to Supabase and to the output queue: run on purpose only." DisplayName="Run Validate Batch" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="ui:QueueItem" Name="Item" />
+      <Variable x:TypeArguments="x:Boolean" Default="False" Name="Done" />
+      <Variable x:TypeArguments="x:Int32" Default="0" Name="Count" />
+      <Variable x:TypeArguments="s:DateTime" Default="[DateTime.MinValue]" Name="LastRequestUtc" />
+      <Variable x:TypeArguments="scg:List(x:String)" Default="[New List(Of String)]" Name="Lines" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <If Condition="[in_MaxItems &lt; 1 OrElse in_MaxItems &gt; 20 OrElse String.IsNullOrWhiteSpace(in_ValidateQueueName) OrElse String.IsNullOrWhiteSpace(in_WishlistQueueName) OrElse String.Equals(in_ValidateQueueName.Trim(), in_WishlistQueueName.Trim(), StringComparison.OrdinalIgnoreCase)]" DisplayName="If the arguments are invalid" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw DisplayName="Throw invalid arguments" Exception="[New ArgumentException($&quot;RunValidateBatch: in_MaxItems must be 1..20 (got {in_MaxItems}) and the input and output queue names must be set and differ.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <ui:LogMessage DisplayName="Log batch start" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[$&quot;RunValidateBatch: up to {in_MaxItems} item(s) from {in_QueueFolder}/{in_ValidateQueueName} to {in_WishlistQueueName}{If(String.IsNullOrWhiteSpace(in_Reference), String.Empty, $&quot;, only Reference {in_Reference.Trim()}&quot;)}.&quot;]" />
+    <While DisplayName="While items remain and the limit is not reached" sap2010:WorkflowViewState.IdRef="While_1" Condition="[Not Done AndAlso Count &lt; in_MaxItems]">
+      <Sequence DisplayName="Process one item" sap2010:WorkflowViewState.IdRef="Sequence_3">
+        <Sequence.Variables>
+          <Variable x:TypeArguments="x:String" Name="Outcome" />
+          <Variable x:TypeArguments="x:String" Name="ResultMessage" />
+          <Variable x:TypeArguments="x:String" Name="Caught">
+            <Variable.Default>
+              <Literal x:TypeArguments="x:String" Value="" />
+            </Variable.Default>
+          </Variable>
+          <Variable x:TypeArguments="x:String" Name="CaughtMessage">
+            <Variable.Default>
+              <Literal x:TypeArguments="x:String" Value="" />
+            </Variable.Default>
+          </Variable>
+        </Sequence.Variables>
+        <Assign x:TypeArguments="ui:QueueItem" DisplayName="Assign Item (reset)" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Item]" Value="[Nothing]" />
+        <If Condition="[String.IsNullOrWhiteSpace(in_Reference)]" DisplayName="If no Reference filter" sap2010:WorkflowViewState.IdRef="If_2">
+          <If.Then>
+            <ui:GetQueueItem ContinueOnError="{x:Null}" FilterStrategy="{x:Null}" TimeoutMS="{x:Null}" DisplayName="Get next Validate item" FolderPath="[in_QueueFolder]" sap2010:WorkflowViewState.IdRef="GetQueueItem_1" QueueType="[in_ValidateQueueName]" TransactionItem="[Item]" />
+          </If.Then>
+          <If.Else>
+            <ui:GetQueueItem ContinueOnError="{x:Null}" TimeoutMS="{x:Null}" DisplayName="Get Validate item by Reference" FilterStrategy="Equals" FolderPath="[in_QueueFolder]" sap2010:WorkflowViewState.IdRef="GetQueueItem_2" QueueType="[in_ValidateQueueName]" Reference="[in_Reference.Trim()]" TransactionItem="[Item]" />
+          </If.Else>
+        </If>
+        <If Condition="[Item Is Nothing]" DisplayName="If no item was obtained" sap2010:WorkflowViewState.IdRef="If_3">
+          <If.Then>
+            <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_4">
+              <ui:LogMessage DisplayName="Log queue empty" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;RunValidateBatch: no (more) New items in {in_ValidateQueueName}.&quot;]" />
+              <Assign x:TypeArguments="x:Boolean" DisplayName="Assign Done (queue empty)" sap2010:WorkflowViewState.IdRef="Assign_2" To="[Done]" Value="[True]" />
+            </Sequence>
+          </If.Then>
+          <If.Else>
+            <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_5">
+              <Assign x:TypeArguments="x:Int32" DisplayName="Assign Count" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Count]" Value="[Count + 1]" />
+              <TryCatch DisplayName="Try the performer" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+                <TryCatch.Try>
+                  <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke ProcessValidateQueueItem" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Wishlist\ProcessValidateQueueItem.xaml">
+                    <ui:InvokeWorkflowFile.Arguments>
+                      <InArgument x:TypeArguments="ui:QueueItem" x:Key="in_TransactionItem">[Item]</InArgument>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_WishlistQueueName">[in_WishlistQueueName]</InArgument>
+                      <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_QueueFolder]</InArgument>
+                      <InOutArgument x:TypeArguments="s:DateTime" x:Key="io_LastRequestUtc">[LastRequestUtc]</InOutArgument>
+                      <OutArgument x:TypeArguments="x:String" x:Key="out_Outcome">[Outcome]</OutArgument>
+                      <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[ResultMessage]</OutArgument>
+                    </ui:InvokeWorkflowFile.Arguments>
+                  </ui:InvokeWorkflowFile>
+                </TryCatch.Try>
+                <TryCatch.Catches>
+                  <Catch x:TypeArguments="ui:BusinessRuleException" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+                    <ActivityAction x:TypeArguments="ui:BusinessRuleException">
+                      <ActivityAction.Argument>
+                        <DelegateInArgument x:TypeArguments="ui:BusinessRuleException" Name="businessException" />
+                      </ActivityAction.Argument>
+                      <Sequence DisplayName="Catch BusinessRuleException" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign Caught (business)" sap2010:WorkflowViewState.IdRef="Assign_4" To="[Caught]" Value="BusinessRuleException" />
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign CaughtMessage (business)" sap2010:WorkflowViewState.IdRef="Assign_5" To="[CaughtMessage]" Value="[businessException.Message]" />
+                      </Sequence>
+                    </ActivityAction>
+                  </Catch>
+                  <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_2">
+                    <ActivityAction x:TypeArguments="s:Exception">
+                      <ActivityAction.Argument>
+                        <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+                      </ActivityAction.Argument>
+                      <Sequence DisplayName="Catch Exception" sap2010:WorkflowViewState.IdRef="Sequence_7">
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign Caught (system)" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Caught]" Value="[exception.GetType().Name]" />
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign CaughtMessage (system)" sap2010:WorkflowViewState.IdRef="Assign_7" To="[CaughtMessage]" Value="[exception.Message]" />
+                      </Sequence>
+                    </ActivityAction>
+                  </Catch>
+                </TryCatch.Catches>
+              </TryCatch>
+              <If Condition="[Caught = String.Empty]" DisplayName="If the performer returned" sap2010:WorkflowViewState.IdRef="If_4">
+                <If.Then>
+                  <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_8">
+                    <ui:SetTransactionStatus ContinueOnError="{x:Null}" Reason="{x:Null}" TimeoutMS="{x:Null}" DisplayName="Set item Successful" ErrorType="Application" sap2010:WorkflowViewState.IdRef="SetTransactionStatus_1" Status="Successful" TransactionItem="[Item]">
+                      <ui:SetTransactionStatus.Analytics>
+                        <scg:Dictionary x:TypeArguments="x:String, InArgument" />
+                      </ui:SetTransactionStatus.Analytics>
+                      <ui:SetTransactionStatus.Output>
+                        <InArgument x:TypeArguments="x:String" x:Key="Outcome">[Outcome]</InArgument>
+                      </ui:SetTransactionStatus.Output>
+                    </ui:SetTransactionStatus>
+                    <InvokeMethod DisplayName="Add summary line (successful)" sap2010:WorkflowViewState.IdRef="InvokeMethod_1" MethodName="Add">
+                      <InvokeMethod.TargetObject>
+                        <InArgument x:TypeArguments="scg:List(x:String)">[Lines]</InArgument>
+                      </InvokeMethod.TargetObject>
+                      <InArgument x:TypeArguments="x:String">[$"{Item.Reference}: Successful, {Outcome}: {ResultMessage}"]</InArgument>
+                    </InvokeMethod>
+                  </Sequence>
+                </If.Then>
+                <If.Else>
+                  <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_9">
+                    <ui:SetTransactionStatus ContinueOnError="{x:Null}" TimeoutMS="{x:Null}" DisplayName="Set item Failed" ErrorType="[If(Caught = &quot;BusinessRuleException&quot;, ErrorType.Business, ErrorType.Application)]" sap2010:WorkflowViewState.IdRef="SetTransactionStatus_2" Reason="[$&quot;{Caught}: {CaughtMessage}&quot;]" Status="Failed" TransactionItem="[Item]">
+                      <ui:SetTransactionStatus.Analytics>
+                        <scg:Dictionary x:TypeArguments="x:String, InArgument" />
+                      </ui:SetTransactionStatus.Analytics>
+                      <ui:SetTransactionStatus.Output>
+                        <scg:Dictionary x:TypeArguments="x:String, InArgument" />
+                      </ui:SetTransactionStatus.Output>
+                    </ui:SetTransactionStatus>
+                    <ui:LogMessage DisplayName="Log item failed" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Warn" Message="[$&quot;RunValidateBatch {Item.Reference}: Failed ({If(Caught = &quot;BusinessRuleException&quot;, &quot;Business&quot;, &quot;Application&quot;)}) {Caught}: {CaughtMessage}&quot;]" />
+                    <InvokeMethod DisplayName="Add summary line (failed)" sap2010:WorkflowViewState.IdRef="InvokeMethod_2" MethodName="Add">
+                      <InvokeMethod.TargetObject>
+                        <InArgument x:TypeArguments="scg:List(x:String)">[Lines]</InArgument>
+                      </InvokeMethod.TargetObject>
+                      <InArgument x:TypeArguments="x:String">[$"{Item.Reference}: Failed, {Caught}: {CaughtMessage}"]</InArgument>
+                    </InvokeMethod>
+                  </Sequence>
+                </If.Else>
+              </If>
+              <If Condition="[Not String.IsNullOrWhiteSpace(in_Reference)]" DisplayName="If only one Reference was requested" sap2010:WorkflowViewState.IdRef="If_5">
+                <If.Then>
+                  <Assign x:TypeArguments="x:Boolean" DisplayName="Assign Done (single Reference)" sap2010:WorkflowViewState.IdRef="Assign_8" To="[Done]" Value="[True]" />
+                </If.Then>
+              </If>
+            </Sequence>
+          </If.Else>
+        </If>
+      </Sequence>
+    </While>
+    <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_ProcessedCount" sap2010:WorkflowViewState.IdRef="Assign_9" To="[out_ProcessedCount]" Value="[Count]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Summary" sap2010:WorkflowViewState.IdRef="Assign_10" To="[out_Summary]" Value="[String.Join(Environment.NewLine, Lines)]" />
+    <ui:LogMessage DisplayName="Log batch summary" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Info" Message="[$&quot;RunValidateBatch: {Count} item(s) processed.{Environment.NewLine}{out_Summary}&quot;]" />
+  </Sequence>
+</Activity>

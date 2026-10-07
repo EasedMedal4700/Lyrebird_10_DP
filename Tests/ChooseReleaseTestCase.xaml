@@ -1,0 +1,103 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Tests_ChooseReleaseTestCase" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uta="clr-namespace:UiPath.Testing.Activities;assembly=UiPath.Testing.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.IO</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Testing</x:String>
+      <x:String>UiPath.Testing.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Testing</AssemblyReference>
+      <AssemblyReference>UiPath.Testing.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Offline: ChooseRelease (release-selection policy) against Tests/Fixtures/ChooseReleaseCases.json - original edition chosen, bonus-track ambiguity, multi-disc, no official release, no dates, empty list, no track count." DisplayName="ChooseReleaseTestCase" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="njl:JArray" Name="Cases" />
+      <Variable x:TypeArguments="scg:List(x:String)" Default="[New List(Of String)()]" Name="Failures" />
+      <Variable x:TypeArguments="x:Int32" Name="CaseCount" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="... Given" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="njl:JArray" DisplayName="Assign Cases" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Cases]" Value="[JArray.Parse(File.ReadAllText(Path.Combine(Environment.CurrentDirectory, &quot;Tests&quot;, &quot;Fixtures&quot;, &quot;ChooseReleaseCases.json&quot;)))]" />
+    </Sequence>
+    <Sequence DisplayName="... When" sap2010:WorkflowViewState.IdRef="Sequence_3">
+      <ui:ForEach x:TypeArguments="njl:JToken" DisplayName="For each case" sap2010:WorkflowViewState.IdRef="ForEach`1_1" Values="[Cases]">
+        <ui:ForEach.Body>
+          <ActivityAction x:TypeArguments="njl:JToken">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="njl:JToken" Name="c" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Body" sap2010:WorkflowViewState.IdRef="Sequence_4">
+              <Sequence.Variables>
+                <Variable x:TypeArguments="x:String" Name="ReleaseId" />
+                <Variable x:TypeArguments="x:Int32" Name="TrackCount" />
+                <Variable x:TypeArguments="x:Boolean" Name="Ambiguous" />
+                <Variable x:TypeArguments="x:String" Name="Reason" />
+                <Variable x:TypeArguments="x:Int32" Name="CandidateCount" />
+                <Variable x:TypeArguments="njl:JObject" Name="E" />
+                <Variable x:TypeArguments="scg:List(x:String)" Name="Problems" />
+              </Sequence.Variables>
+              <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke ChooseRelease" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\MusicBrainz\ChooseRelease.xaml">
+                <ui:InvokeWorkflowFile.Arguments>
+                  <InArgument x:TypeArguments="njl:JArray" x:Key="in_Releases">[CType(c("releases"), JArray)]</InArgument>
+                  <InArgument x:TypeArguments="x:String" x:Key="in_ChosenReleaseId">[If(c.Value(Of String)("chosenReleaseId"), String.Empty)]</InArgument>
+                  <OutArgument x:TypeArguments="x:String" x:Key="out_ReleaseId">[ReleaseId]</OutArgument>
+                  <OutArgument x:TypeArguments="x:Int32" x:Key="out_TrackCount">[TrackCount]</OutArgument>
+                  <OutArgument x:TypeArguments="x:Boolean" x:Key="out_IsAmbiguous">[Ambiguous]</OutArgument>
+                  <OutArgument x:TypeArguments="x:String" x:Key="out_Reason">[Reason]</OutArgument>
+                  <OutArgument x:TypeArguments="x:Int32" x:Key="out_CandidateCount">[CandidateCount]</OutArgument>
+                </ui:InvokeWorkflowFile.Arguments>
+              </ui:InvokeWorkflowFile>
+              <Assign x:TypeArguments="njl:JObject" DisplayName="Assign E" sap2010:WorkflowViewState.IdRef="Assign_2" To="[E]" Value="[CType(c(&quot;expect&quot;), JObject)]" />
+              <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Assign Problems" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Problems]" Value="[{If(Ambiguous &lt;&gt; E.Value(Of Boolean)(&quot;ambiguous&quot;), $&quot;ambiguous={Ambiguous} ({Reason})&quot;, Nothing), If(E(&quot;releaseId&quot;) IsNot Nothing AndAlso ReleaseId &lt;&gt; E.Value(Of String)(&quot;releaseId&quot;), $&quot;releaseId='{ReleaseId}'&quot;, Nothing), If(E(&quot;trackCount&quot;) IsNot Nothing AndAlso TrackCount &lt;&gt; E.Value(Of Integer)(&quot;trackCount&quot;), $&quot;trackCount={TrackCount}&quot;, Nothing), If(E(&quot;reasonContains&quot;) IsNot Nothing AndAlso Not If(Reason, String.Empty).Contains(E.Value(Of String)(&quot;reasonContains&quot;)), $&quot;reason lacks '{E.Value(Of String)(&quot;reasonContains&quot;)}' (reason: {Reason})&quot;, Nothing), If(Ambiguous AndAlso (ReleaseId &lt;&gt; String.Empty OrElse TrackCount &lt;&gt; 0), &quot;ambiguous result must not carry a release&quot;, Nothing)}.Where(Function(p) p IsNot Nothing).ToList()]" />
+              <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Collect failures" sap2010:WorkflowViewState.IdRef="Assign_4" To="[Failures]" Value="[Failures.Concat(Problems.Select(Function(p) c.Value(Of String)(&quot;name&quot;) &amp; &quot;: &quot; &amp; p)).ToList()]" />
+              <Assign x:TypeArguments="x:Int32" DisplayName="Count case" sap2010:WorkflowViewState.IdRef="Assign_5" To="[CaseCount]" Value="[CaseCount + 1]" />
+              <ui:LogMessage DisplayName="Log case" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[If(Problems.Count = 0, &quot;PASS &quot;, &quot;FAIL &quot;) &amp; c.Value(Of String)(&quot;name&quot;) &amp; &quot; -&gt; &quot; &amp; Reason &amp; If(Problems.Count = 0, String.Empty, &quot; :: &quot; &amp; String.Join(&quot;; &quot;, Problems))]" />
+            </Sequence>
+          </ActivityAction>
+        </ui:ForEach.Body>
+      </ui:ForEach>
+    </Sequence>
+    <Sequence DisplayName="... Then" sap2010:WorkflowViewState.IdRef="Sequence_5">
+      <ui:LogMessage DisplayName="Log summary" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;ChooseRelease: {CaseCount} case(s), {Failures.Count} failure(s).&quot; &amp; If(Failures.Count = 0, String.Empty, &quot; &quot; &amp; String.Join(&quot; | &quot;, Failures))]" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify all cases pass" Expression="[CaseCount &gt; 0 AndAlso CaseCount = Cases.Count AndAlso Failures.Count = 0]" sap2010:WorkflowViewState.IdRef="VerifyExpression_1" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+    </Sequence>
+  </Sequence>
+</Activity>

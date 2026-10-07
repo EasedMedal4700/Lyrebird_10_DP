@@ -1,0 +1,133 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_BuildValidationResult" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="in_WishlistId" Type="InArgument(x:Int64)" />
+    <x:Property Name="in_Submission" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="FLAC, MP3 or ANY (from the wishlist row)." Name="in_PreferredFormat" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Validation result as one JSON object (keeps the argument count within the analyzer limit):&#xA;validateStatus (validated | check_spelling | not_found | api_error - anything but the first three throws a retryable System exception), validateMessage, mbArtist, mbAlbum (MusicBrainz spelling), artistMbid, releaseGroupMbid (release GROUP, stored in wishlist.mbid), score (0-100; missing or -1 = unknown, not written), releaseId (the chosen release), trackCount, releaseAmbiguous (no release could be chosen), releaseReason, duplicateOf (id of another active row with the same release group; 0 = none), alreadyEnqueued (a Lyrebird_Wishlist item with this Reference exists: only persist)." Name="in_Validation" Type="InArgument(njl:JObject)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has an mb_release_id column (proposed migration)." Name="in_HasReleaseIdColumn" Type="InArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has an mb_artist_id column (proposed migration)." Name="in_HasArtistIdColumn" Type="InArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has the reserved_release_group column: the PATCH then keeps the reservation for 'queued' and releases it (NULL) for every other outcome." Name="in_HasReservationColumn" Type="InArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="queued | needs_release_choice | duplicate_release | check_spelling | not_found" Name="out_Outcome" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Existing wishlist status to write: queued | check_spelling | not_found | failed." Name="out_DbStatus" Type="OutArgument(x:String)" />
+    <x:Property Name="out_Message" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="JSON body for UpdateRows (PATCH)." Name="out_PatchBody" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when a Lyrebird_Wishlist item must be added." Name="out_Enqueue" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="WL-&lt;id&gt;-S&lt;submission&gt; (same Reference in every queue)." Name="out_Reference" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Lyrebird_Wishlist specific content (empty unless outcome = queued)." Name="out_QueueItemInformation" Type="OutArgument(scg:Dictionary(x:String, x:Object))" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Turns a validation result into what has to be written. No side effects.&#xA;Only existing wishlist statuses are written: queued, check_spelling, not_found, failed.&#xA;- needs_release_choice is stored as check_spelling with a 'RELEASE_CHOICE:' message.&#xA;- duplicate_release is stored as failed with a 'DUPLICATE:' message.&#xA;(proposed dedicated statuses: Documentation/Migration_Proposal_Part2.sql)&#xA;A technical MusicBrainz failure (api_error) is NEVER written: it throws a System exception so the queue retries the item." DisplayName="Build Validation Result" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Name="ScoreLabel" />
+      <Variable x:TypeArguments="x:Boolean" Name="GroupValidated" />
+      <Variable x:TypeArguments="x:String" Default="^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$" Name="UuidPattern" />
+      <Variable x:TypeArguments="scg:List(njl:JProperty)" Name="Props" />
+      <Variable x:TypeArguments="njl:JObject" Name="V" />
+      <Variable x:TypeArguments="x:String" Name="ValidateStatus" />
+      <Variable x:TypeArguments="x:String" Name="ValidateMessage" />
+      <Variable x:TypeArguments="x:String" Name="MbArtist" />
+      <Variable x:TypeArguments="x:String" Name="MbAlbum" />
+      <Variable x:TypeArguments="x:String" Name="ArtistMbid" />
+      <Variable x:TypeArguments="x:String" Name="ReleaseGroupMbid" />
+      <Variable x:TypeArguments="x:Int32" Name="Score" />
+      <Variable x:TypeArguments="x:String" Name="ReleaseId" />
+      <Variable x:TypeArguments="x:Int32" Name="TrackCount" />
+      <Variable x:TypeArguments="x:Boolean" Name="ReleaseAmbiguous" />
+      <Variable x:TypeArguments="x:String" Name="ReleaseReason" />
+      <Variable x:TypeArguments="x:Int64" Name="DuplicateOf" />
+      <Variable x:TypeArguments="x:Boolean" Name="AlreadyEnqueued" />
+      <Variable x:TypeArguments="x:String" Name="RequestArtist" />
+      <Variable x:TypeArguments="x:String" Name="RequestAlbum" />
+      <Variable x:TypeArguments="x:String" Name="RequestPreferredFormat" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence sap2010:Annotation.AnnotationText="Missing keys get safe defaults: empty text, 0, False; score -1 (unknown)." DisplayName="Read validation input" sap2010:WorkflowViewState.IdRef="Sequence_5">
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign V" sap2010:WorkflowViewState.IdRef="Assign_14" To="[V]" Value="[If(in_Validation, New JObject())]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ValidateStatus" sap2010:WorkflowViewState.IdRef="Assign_15" To="[ValidateStatus]" Value="[If(V.Value(Of String)(&quot;validateStatus&quot;), String.Empty).Trim()]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ValidateMessage" sap2010:WorkflowViewState.IdRef="Assign_16" To="[ValidateMessage]" Value="[If(V.Value(Of String)(&quot;validateMessage&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign MbArtist" sap2010:WorkflowViewState.IdRef="Assign_17" To="[MbArtist]" Value="[If(V.Value(Of String)(&quot;mbArtist&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign MbAlbum" sap2010:WorkflowViewState.IdRef="Assign_18" To="[MbAlbum]" Value="[If(V.Value(Of String)(&quot;mbAlbum&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ArtistMbid" sap2010:WorkflowViewState.IdRef="Assign_19" To="[ArtistMbid]" Value="[If(V.Value(Of String)(&quot;artistMbid&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ReleaseGroupMbid" sap2010:WorkflowViewState.IdRef="Assign_20" To="[ReleaseGroupMbid]" Value="[If(V.Value(Of String)(&quot;releaseGroupMbid&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Assign Score" sap2010:WorkflowViewState.IdRef="Assign_21" To="[Score]" Value="[If(V.Value(Of Integer?)(&quot;score&quot;), -1)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ReleaseId" sap2010:WorkflowViewState.IdRef="Assign_22" To="[ReleaseId]" Value="[If(V.Value(Of String)(&quot;releaseId&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:Int32" DisplayName="Assign TrackCount" sap2010:WorkflowViewState.IdRef="Assign_23" To="[TrackCount]" Value="[If(V.Value(Of Integer?)(&quot;trackCount&quot;), 0)]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign ReleaseAmbiguous" sap2010:WorkflowViewState.IdRef="Assign_24" To="[ReleaseAmbiguous]" Value="[If(V.Value(Of Boolean?)(&quot;releaseAmbiguous&quot;), False)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ReleaseReason" sap2010:WorkflowViewState.IdRef="Assign_25" To="[ReleaseReason]" Value="[If(V.Value(Of String)(&quot;releaseReason&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:Int64" DisplayName="Assign DuplicateOf" sap2010:WorkflowViewState.IdRef="Assign_26" To="[DuplicateOf]" Value="[If(V.Value(Of Long?)(&quot;duplicateOf&quot;), 0L)]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign AlreadyEnqueued" sap2010:WorkflowViewState.IdRef="Assign_27" To="[AlreadyEnqueued]" Value="[If(V.Value(Of Boolean?)(&quot;alreadyEnqueued&quot;), False)]" />
+      <Assign x:TypeArguments="x:String" sap2010:Annotation.AnnotationText="The wishlist input that was validated (artist/album/format as read from the row). Carried in the Lyrebird_Wishlist item so recovery and process 20 can detect later edits." DisplayName="Assign RequestArtist" sap2010:WorkflowViewState.IdRef="Assign_28" To="[RequestArtist]" Value="[If(V.Value(Of String)(&quot;requestArtist&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign RequestAlbum" sap2010:WorkflowViewState.IdRef="Assign_29" To="[RequestAlbum]" Value="[If(V.Value(Of String)(&quot;requestAlbum&quot;), String.Empty)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign RequestPreferredFormat" sap2010:WorkflowViewState.IdRef="Assign_30" To="[RequestPreferredFormat]" Value="[If(V.Value(Of String)(&quot;requestPreferredFormat&quot;), in_PreferredFormat)]" />
+    </Sequence>
+    <If Condition="[Not {&quot;validated&quot;, &quot;check_spelling&quot;, &quot;not_found&quot;}.Contains(ValidateStatus)]" DisplayName="If technical failure or unknown status" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw sap2010:Annotation.AnnotationText="System exception (not BusinessRuleException): the queue retries the item; nothing is written to the wishlist." DisplayName="Throw retryable MusicBrainz failure" Exception="[New Exception($&quot;MusicBrainz validation for wishlist {in_WishlistId} failed technically (status '{ValidateStatus}'), retry later: {ValidateMessage}&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <Sequence DisplayName="Decide outcome" sap2010:WorkflowViewState.IdRef="Sequence_3">
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ScoreLabel" sap2010:WorkflowViewState.IdRef="Assign_1" To="[ScoreLabel]" Value="[If(Score &gt;= 0, Score.ToString(), &quot;n/a&quot;)]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign GroupValidated" sap2010:WorkflowViewState.IdRef="Assign_2" To="[GroupValidated]" Value="[ValidateStatus = &quot;validated&quot;]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Outcome" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_Outcome]" Value="[If(Not GroupValidated, ValidateStatus, If(DuplicateOf &gt; 0, &quot;duplicate_release&quot;, If(ReleaseAmbiguous OrElse Not Regex.IsMatch(If(ReleaseId, String.Empty), UuidPattern) OrElse Not Regex.IsMatch(If(ReleaseGroupMbid, String.Empty), UuidPattern) OrElse TrackCount &lt;= 0, &quot;needs_release_choice&quot;, &quot;queued&quot;)))]" sap2010:Annotation.AnnotationText="Only enqueue with a valid release MBID, a valid release group MBID and a track count; anything else needs a human." />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_DbStatus" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_DbStatus]" Value="[If(out_Outcome = &quot;queued&quot;, &quot;queued&quot;, If(out_Outcome = &quot;not_found&quot;, &quot;not_found&quot;, If(out_Outcome = &quot;duplicate_release&quot;, &quot;failed&quot;, &quot;check_spelling&quot;)))]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_Message]" Value="[If(out_Outcome = &quot;queued&quot;, $&quot;Validated as '{MbArtist}' - '{MbAlbum}' (score {ScoreLabel}); release {ReleaseId}, {TrackCount} tracks. {ReleaseReason}&quot; &amp; If(AlreadyEnqueued, &quot; Recovered from the existing Lyrebird_Wishlist item.&quot;, String.Empty), If(out_Outcome = &quot;needs_release_choice&quot;, $&quot;RELEASE_CHOICE: '{MbArtist}' - '{MbAlbum}' (release group {ReleaseGroupMbid}) is valid, but no release could be chosen: {ReleaseReason}&quot;, If(out_Outcome = &quot;duplicate_release&quot;, $&quot;DUPLICATE: same album as wishlist row {DuplicateOf} (release group {ReleaseGroupMbid}); not queued again. Delete this row, or resubmit it if it is a different album.&quot;, If(out_Outcome = &quot;check_spelling&quot;, If(ValidateMessage, String.Empty) &amp; If(String.IsNullOrWhiteSpace(MbAlbum), String.Empty, $&quot; Closest MusicBrainz match: '{MbArtist}' - '{MbAlbum}' (score {ScoreLabel}).&quot;), If(ValidateMessage, &quot;No match on MusicBrainz.&quot;)))))]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message (max 1000)" sap2010:WorkflowViewState.IdRef="Assign_6" To="[out_Message]" Value="[If(out_Message.Length &gt; 1000, out_Message.Substring(0, 997) &amp; &quot;...&quot;, out_Message).Trim()]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reference" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_Reference]" Value="[$&quot;WL-{in_WishlistId}-S{in_Submission}&quot;]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_Enqueue" sap2010:WorkflowViewState.IdRef="Assign_8" To="[out_Enqueue]" Value="[out_Outcome = &quot;queued&quot; AndAlso Not AlreadyEnqueued]" />
+    </Sequence>
+    <Sequence sap2010:Annotation.AnnotationText="Only columns that exist today are written by default; mb_release_id / mb_artist_id only when the row shows those columns. Metadata is written only for a validated release group (never a spelling suggestion)." DisplayName="Build PATCH body" sap2010:WorkflowViewState.IdRef="Sequence_4">
+      <Assign x:TypeArguments="scg:List(njl:JProperty)" DisplayName="Assign Props (status, message)" sap2010:WorkflowViewState.IdRef="Assign_9" To="[Props]" Value="[New List(Of JProperty) From {New JProperty(&quot;status&quot;, out_DbStatus), New JProperty(&quot;message&quot;, out_Message)}]" />
+      <Assign x:TypeArguments="scg:List(njl:JProperty)" DisplayName="Add validated group metadata" sap2010:WorkflowViewState.IdRef="Assign_10" To="[Props]" Value="[Props.Concat(If(GroupValidated, {New JProperty(&quot;mb_artist&quot;, If(MbArtist, String.Empty)), New JProperty(&quot;mb_album&quot;, If(MbAlbum, String.Empty))}, Array.Empty(Of JProperty)())).Concat(If(GroupValidated AndAlso Regex.IsMatch(If(ReleaseGroupMbid, String.Empty), UuidPattern), {New JProperty(&quot;mbid&quot;, ReleaseGroupMbid)}, Array.Empty(Of JProperty)())).Concat(If(GroupValidated AndAlso Score &gt;= 0 AndAlso Score &lt;= 100, {New JProperty(&quot;match_score&quot;, Score)}, Array.Empty(Of JProperty)())).ToList()]" />
+      <Assign x:TypeArguments="scg:List(njl:JProperty)" DisplayName="Add release metadata (queued)" sap2010:WorkflowViewState.IdRef="Assign_11" To="[Props]" Value="[Props.Concat(If(out_Outcome = &quot;queued&quot;, {New JProperty(&quot;track_count&quot;, TrackCount)}, Array.Empty(Of JProperty)())).Concat(If(out_Outcome = &quot;queued&quot; AndAlso in_HasReleaseIdColumn AndAlso Regex.IsMatch(If(ReleaseId, String.Empty), UuidPattern), {New JProperty(&quot;mb_release_id&quot;, ReleaseId)}, Array.Empty(Of JProperty)())).Concat(If(GroupValidated AndAlso in_HasArtistIdColumn AndAlso Regex.IsMatch(If(ArtistMbid, String.Empty), UuidPattern), {New JProperty(&quot;mb_artist_id&quot;, ArtistMbid)}, Array.Empty(Of JProperty)())).ToList()]" />
+      <Assign x:TypeArguments="scg:List(njl:JProperty)" sap2010:Annotation.AnnotationText="Album reservation: kept (= release group) for queued, released (NULL) for every other outcome." DisplayName="Add reservation" sap2010:WorkflowViewState.IdRef="Assign_31" To="[Props]" Value="[Props.Concat(If(in_HasReservationColumn, {New JProperty(&quot;reserved_release_group&quot;, If(out_Outcome = &quot;queued&quot;, CType(New JValue(ReleaseGroupMbid), JToken), JValue.CreateNull()))}, Array.Empty(Of JProperty)())).ToList()]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_PatchBody" sap2010:WorkflowViewState.IdRef="Assign_12" To="[out_PatchBody]" Value="[New JObject(Props).ToString(Newtonsoft.Json.Formatting.None)]" />
+    </Sequence>
+    <Assign x:TypeArguments="scg:Dictionary(x:String, x:Object)" sap2010:Annotation.AnnotationText="Lyrebird_Wishlist contract (Documentation/Lyrebird_DataContract.md). Release group and release MBIDs are separate fields." DisplayName="Assign out_QueueItemInformation" sap2010:WorkflowViewState.IdRef="Assign_13" To="[out_QueueItemInformation]" Value="[If(out_Outcome = &quot;queued&quot;, New Dictionary(Of String, Object) From {{&quot;PayloadVersion&quot;, 1}, {&quot;WishlistId&quot;, in_WishlistId}, {&quot;Submission&quot;, in_Submission}, {&quot;Artist&quot;, MbArtist}, {&quot;Album&quot;, MbAlbum}, {&quot;PreferredFormat&quot;, in_PreferredFormat}, {&quot;MbReleaseGroupId&quot;, ReleaseGroupMbid}, {&quot;MbReleaseId&quot;, ReleaseId}, {&quot;MbArtistId&quot;, If(ArtistMbid, String.Empty)}, {&quot;TrackCount&quot;, TrackCount}, {&quot;RequestArtist&quot;, RequestArtist}, {&quot;RequestAlbum&quot;, RequestAlbum}, {&quot;RequestPreferredFormat&quot;, RequestPreferredFormat}}, New Dictionary(Of String, Object)())]" />
+  </Sequence>
+</Activity>

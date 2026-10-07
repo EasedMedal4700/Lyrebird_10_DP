@@ -1,0 +1,81 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_ReadExistingWishlistItem" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Specific content of the existing Lyrebird_Wishlist item." Name="in_Content" Type="InArgument(scg:Dictionary(x:String, x:Object))" />
+    <x:Property Name="in_ItemStatus" Type="InArgument(x:String)" />
+    <x:Property Name="in_Reference" Type="InArgument(x:String)" />
+    <x:Property Name="in_QueueName" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Current wishlist input (artist/album/format as read from the row now)." Name="in_Artist" Type="InArgument(x:String)" />
+    <x:Property Name="in_Album" Type="InArgument(x:String)" />
+    <x:Property Name="in_PreferredFormat" Type="InArgument(x:String)" />
+    <x:Property Name="out_MbArtist" Type="OutArgument(x:String)" />
+    <x:Property Name="out_MbAlbum" Type="OutArgument(x:String)" />
+    <x:Property Name="out_ArtistMbid" Type="OutArgument(x:String)" />
+    <x:Property Name="out_ReleaseGroupMbid" Type="OutArgument(x:String)" />
+    <x:Property Name="out_ReleaseId" Type="OutArgument(x:String)" />
+    <x:Property Name="out_TrackCount" Type="OutArgument(x:Int32)" />
+    <x:Property Name="out_ReleaseReason" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="An item with this Reference already exists in Lyrebird_Wishlist (earlier attempt). It is the record of what was enqueued, so the row must be finished from ITS content - but only if it was made for exactly the current row input (RequestArtist / RequestAlbum / RequestPreferredFormat). Otherwise BusinessRuleException: an old queue payload is never attached to edited input." DisplayName="Read Existing Wishlist Item" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="s:Func(x:String, x:String)" Name="GetC" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Assign x:TypeArguments="s:Func(x:String, x:String)" DisplayName="Assign GetC" sap2010:WorkflowViewState.IdRef="Assign_1" To="[GetC]" Value="[Function(k As String) If(in_Content Is Nothing, String.Empty, If(in_Content.Where(Function(kv) String.Equals(kv.Key, k, StringComparison.OrdinalIgnoreCase)).Select(Function(kv) If(kv.Value Is Nothing, String.Empty, kv.Value.ToString())).FirstOrDefault(), String.Empty).Trim())]" />
+    <If Condition="[GetC(&quot;RequestArtist&quot;) &lt;&gt; If(in_Artist, String.Empty).Trim() OrElse GetC(&quot;RequestAlbum&quot;) &lt;&gt; If(in_Album, String.Empty).Trim() OrElse GetC(&quot;RequestPreferredFormat&quot;).ToUpperInvariant() &lt;&gt; If(in_PreferredFormat, String.Empty).Trim().ToUpperInvariant()]" DisplayName="If the item was made for other input" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw DisplayName="Throw edited after enqueue" Exception="[New BusinessRuleException($&quot;{in_Reference}: wishlist row was edited after its {in_QueueName} item was created (item for '{GetC(&quot;RequestArtist&quot;)}' - '{GetC(&quot;RequestAlbum&quot;)}' {GetC(&quot;RequestPreferredFormat&quot;)}, row now '{in_Artist}' - '{in_Album}' {in_PreferredFormat}). Nothing was written; the old item stays for the old input. Resubmit (submission + 1) to validate the new input.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_MbArtist" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_MbArtist]" Value="[GetC(&quot;Artist&quot;)]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_MbAlbum" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_MbAlbum]" Value="[GetC(&quot;Album&quot;)]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ArtistMbid" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_ArtistMbid]" Value="[GetC(&quot;MbArtistId&quot;)]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ReleaseGroupMbid" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_ReleaseGroupMbid]" Value="[GetC(&quot;MbReleaseGroupId&quot;)]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ReleaseId" sap2010:WorkflowViewState.IdRef="Assign_6" To="[out_ReleaseId]" Value="[GetC(&quot;MbReleaseId&quot;)]" />
+    <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_TrackCount" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_TrackCount]" Value="[If(Regex.IsMatch(GetC(&quot;TrackCount&quot;), &quot;^[0-9]{1,4}$&quot;), CInt(GetC(&quot;TrackCount&quot;)), 0)]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ReleaseReason" sap2010:WorkflowViewState.IdRef="Assign_8" To="[out_ReleaseReason]" Value="[$&quot;Taken from existing {in_QueueName} item ({in_ItemStatus}).&quot;]" />
+  </Sequence>
+</Activity>

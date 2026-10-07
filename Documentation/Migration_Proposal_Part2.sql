@@ -1,0 +1,30 @@
+-- =====================================================================
+-- Lyrebird wishlist: remaining OPTIONAL schema proposal for 10_DP part 2
+-- Date: 2026-10-07
+--
+-- APPLIED (do not run again): submission, mb_release_id, mb_artist_id,
+-- chosen_release_id, reserved_release_group + unique index
+-- wishlist_reserved_release_group_uniq, column comments. See
+--   Migrations/2026-10-07_01_wishlist_part2.sql (exact applied script, this repo)
+--   = ../../Lyrebird_00_Shared/DB/migrations/2026-10-07_01_wishlist_part2.sql
+-- and Lyrebird_DataContract.md section 7.
+--
+-- The earlier proposal for a unique index on mbid for active statuses is
+-- replaced by the applied reservation column (claimed BEFORE enqueue).
+-- =====================================================================
+
+-- OPTIONAL, NOT APPLIED: dedicated statuses ---------------------------
+-- Replaces the workarounds check_spelling + 'RELEASE_CHOICE: ...' and
+-- failed + 'DUPLICATE: ...' with explicit states.
+-- REQUIRES, in the same deployment: BuildValidationResult.xaml (out_DbStatus
+-- mapping), DecideRowAction.xaml (completed statuses), the offline test
+-- fixtures, and Lyrebird_DataContract.md section 5.
+--
+-- begin;
+-- alter table lyrebird.wishlist drop constraint wishlist_status_check;
+-- alter table lyrebird.wishlist add constraint wishlist_status_check check (status = any (array[
+--   'new','check_spelling','not_found','needs_release_choice','duplicate',
+--   'queued','downloading','downloaded','tagged','uploaded','failed']));
+-- commit;
+
+-- Still missing (not part of this file): download_attempts DDL, process_log.

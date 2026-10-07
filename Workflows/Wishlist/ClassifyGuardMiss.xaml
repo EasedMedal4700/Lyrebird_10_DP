@@ -1,0 +1,99 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_ClassifyGuardMiss" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property Name="in_WishlistId" Type="InArgument(x:Int64)" />
+    <x:Property Name="in_Submission" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="Status the guarded update tried to write (empty for the reservation claim, which writes no status)." Name="in_IntendedStatus" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="What was being written, for messages (e.g. 'album reservation', 'final update')." Name="in_Context" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="already_persisted | superseded. Every other situation throws a BusinessRuleException." Name="out_Result" Type="OutArgument(x:String)" />
+    <x:Property Name="out_Message" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="A guarded update (id + status=new + submission + updated_at) matched zero rows. Never treated as success by itself: re-read the row and classify.&#xA;- already_persisted: same submission, row already has the intended status (an earlier attempt wrote it).&#xA;- superseded: the row has a newer submission; the newer request will be processed instead.&#xA;- otherwise BusinessRuleException: the row was edited, deleted or changed by someone else; nothing was overwritten." DisplayName="Classify Guard Miss" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="njl:JArray" Name="Rows" />
+      <Variable x:TypeArguments="x:String" Name="Action" />
+      <Variable x:TypeArguments="x:String" Name="Reason" />
+      <Variable x:TypeArguments="x:String" Name="RowStatus" />
+      <Variable x:TypeArguments="x:Int32" Name="DiscardInt" />
+      <Variable x:TypeArguments="x:Boolean" Name="DiscardBool" />
+      <Variable x:TypeArguments="x:String" Name="DiscardString" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke GetRows wishlist row again" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Supabase\GetRows.xaml">
+      <ui:InvokeWorkflowFile.Arguments>
+        <InArgument x:TypeArguments="x:String" x:Key="in_Table">wishlist</InArgument>
+        <InArgument x:TypeArguments="x:String" x:Key="in_Query">[$"select=*,row_version:updated_at::text&amp;id=eq.{in_WishlistId}"]</InArgument>
+        <OutArgument x:TypeArguments="njl:JArray" x:Key="out_Rows">[Rows]</OutArgument>
+      </ui:InvokeWorkflowFile.Arguments>
+    </ui:InvokeWorkflowFile>
+    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke DecideRowAction" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_2" UnSafe="False" WorkflowFileName="Workflows\Wishlist\DecideRowAction.xaml">
+      <ui:InvokeWorkflowFile.Arguments>
+        <InArgument x:TypeArguments="x:Int64" x:Key="in_WishlistId">[in_WishlistId]</InArgument>
+        <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[in_Submission]</InArgument>
+        <InArgument x:TypeArguments="njl:JToken" x:Key="in_Row">[If(Rows Is Nothing OrElse Rows.Count = 0, Nothing, Rows(0))]</InArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_Action">[Action]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_Reason">[Reason]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_RowStatus">[RowStatus]</OutArgument>
+        <OutArgument x:TypeArguments="x:Int32" x:Key="out_RowSubmission">[DiscardInt]</OutArgument>
+        <OutArgument x:TypeArguments="x:Boolean" x:Key="out_HasSubmissionColumn">[DiscardBool]</OutArgument>
+        <OutArgument x:TypeArguments="x:Boolean" x:Key="out_HasReleaseIdColumn">[DiscardBool]</OutArgument>
+        <OutArgument x:TypeArguments="x:Boolean" x:Key="out_HasArtistIdColumn">[DiscardBool]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_RowVersion">[DiscardString]</OutArgument>
+        <OutArgument x:TypeArguments="x:Boolean" x:Key="out_HasReservationColumn">[DiscardBool]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_ReservedReleaseGroup">[DiscardString]</OutArgument>
+        <OutArgument x:TypeArguments="x:String" x:Key="out_ChosenReleaseId">[DiscardString]</OutArgument>
+      </ui:InvokeWorkflowFile.Arguments>
+    </ui:InvokeWorkflowFile>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Result" sap2010:WorkflowViewState.IdRef="Assign_1" To="[out_Result]" Value="[If(Action = &quot;stale_submission&quot;, &quot;superseded&quot;, If(Action = &quot;already_completed&quot; AndAlso Not String.IsNullOrEmpty(in_IntendedStatus) AndAlso RowStatus = in_IntendedStatus, &quot;already_persisted&quot;, String.Empty))]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Message" sap2010:WorkflowViewState.IdRef="Assign_2" To="[out_Message]" Value="[If(out_Result = &quot;superseded&quot;, $&quot;{in_Context} not written: {Reason} Nothing was overwritten; the newer submission will be processed.&quot;, If(out_Result = &quot;already_persisted&quot;, $&quot;{in_Context}: row is already '{RowStatus}' for this submission (earlier attempt).&quot;, If(Action = &quot;process&quot;, $&quot;{in_Context} not written: wishlist row {in_WishlistId} was edited while it was being validated. Nothing was overwritten. Resubmit (submission + 1) so the new input is validated.&quot;, $&quot;{in_Context} not written: {Reason} Nothing was overwritten.&quot;)))]" />
+    <If Condition="[out_Result = String.Empty]" DisplayName="If edited, deleted or changed elsewhere" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw DisplayName="Throw business exception" Exception="[New BusinessRuleException(out_Message)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <ui:LogMessage DisplayName="Log classification" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Warn" Message="[$&quot;Guard miss for wishlist {in_WishlistId} S{in_Submission}: {out_Result}. {out_Message}&quot;]" />
+  </Sequence>
+</Activity>

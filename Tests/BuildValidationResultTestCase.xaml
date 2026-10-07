@@ -1,0 +1,152 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Tests_BuildValidationResultTestCase" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uta="clr-namespace:UiPath.Testing.Activities;assembly=UiPath.Testing.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.IO</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Testing</x:String>
+      <x:String>UiPath.Testing.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Testing</AssemblyReference>
+      <AssemblyReference>UiPath.Testing.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Offline: BuildValidationResult against Tests/Fixtures/BuildValidationResultCases.json - valid result (today's and migrated schema), release ambiguity, no match, spelling, duplicate album, recovery after partial completion, transient failure (must throw a System exception, not BusinessRuleException), invalid MBIDs." DisplayName="BuildValidationResultTestCase" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="njl:JObject" Name="Fixture" />
+      <Variable x:TypeArguments="njl:JObject" Name="Base" />
+      <Variable x:TypeArguments="njl:JArray" Name="Cases" />
+      <Variable x:TypeArguments="scg:List(x:String)" Default="[New List(Of String)()]" Name="Failures" />
+      <Variable x:TypeArguments="x:Int32" Name="CaseCount" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="... Given" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Fixture" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Fixture]" Value="[JObject.Parse(File.ReadAllText(Path.Combine(Environment.CurrentDirectory, &quot;Tests&quot;, &quot;Fixtures&quot;, &quot;BuildValidationResultCases.json&quot;)))]" />
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Base" sap2010:WorkflowViewState.IdRef="Assign_2" To="[Base]" Value="[CType(Fixture(&quot;base&quot;), JObject)]" />
+      <Assign x:TypeArguments="njl:JArray" DisplayName="Assign Cases" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Cases]" Value="[CType(Fixture(&quot;cases&quot;), JArray)]" />
+    </Sequence>
+    <Sequence DisplayName="... When" sap2010:WorkflowViewState.IdRef="Sequence_3">
+      <ui:ForEach x:TypeArguments="njl:JToken" DisplayName="For each case" sap2010:WorkflowViewState.IdRef="ForEach`1_1" Values="[Cases]">
+        <ui:ForEach.Body>
+          <ActivityAction x:TypeArguments="njl:JToken">
+            <ActivityAction.Argument>
+              <DelegateInArgument x:TypeArguments="njl:JToken" Name="c" />
+            </ActivityAction.Argument>
+            <Sequence DisplayName="Body" sap2010:WorkflowViewState.IdRef="Sequence_4">
+              <Sequence.Variables>
+                <Variable x:TypeArguments="njl:JObject" Name="I" />
+                <Variable x:TypeArguments="njl:JObject" Name="E" />
+                <Variable x:TypeArguments="x:String" Name="Outcome" />
+                <Variable x:TypeArguments="x:String" Name="DbStatus" />
+                <Variable x:TypeArguments="x:String" Name="Message" />
+                <Variable x:TypeArguments="x:String" Name="PatchBody" />
+                <Variable x:TypeArguments="x:Boolean" Name="Enqueue" />
+                <Variable x:TypeArguments="x:String" Name="Reference" />
+                <Variable x:TypeArguments="scg:Dictionary(x:String, x:Object)" Name="QueueInfo" />
+                <Variable x:TypeArguments="x:String" Default="" Name="Caught" />
+                <Variable x:TypeArguments="x:String" Name="CaughtMessage" />
+                <Variable x:TypeArguments="njl:JObject" Name="Patch" />
+                <Variable x:TypeArguments="scg:List(x:String)" Name="Problems" />
+              </Sequence.Variables>
+              <Assign x:TypeArguments="njl:JObject" sap2010:Annotation.AnnotationText="Base values, overridden by the case's 'input'." DisplayName="Assign I (merged input)" sap2010:WorkflowViewState.IdRef="Assign_4" To="[I]" Value="[New JObject(Base.Properties().Where(Function(p) CType(c(&quot;input&quot;), JObject).Property(p.Name) Is Nothing).Cast(Of Object)().Concat(CType(c(&quot;input&quot;), JObject).Properties().Cast(Of Object)()).ToArray())]" />
+              <Assign x:TypeArguments="njl:JObject" DisplayName="Assign E" sap2010:WorkflowViewState.IdRef="Assign_5" To="[E]" Value="[CType(c(&quot;expect&quot;), JObject)]" />
+              <TryCatch DisplayName="Try invoke BuildValidationResult" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+                <TryCatch.Try>
+                  <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_5">
+                    <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke BuildValidationResult" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_1" UnSafe="False" WorkflowFileName="Workflows\Wishlist\BuildValidationResult.xaml">
+                      <ui:InvokeWorkflowFile.Arguments>
+                        <InArgument x:TypeArguments="x:Int64" x:Key="in_WishlistId">[I.Value(Of Long)("wishlistId")]</InArgument>
+                        <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[I.Value(Of Integer)("submission")]</InArgument>
+                        <InArgument x:TypeArguments="x:String" x:Key="in_PreferredFormat">[I.Value(Of String)("preferredFormat")]</InArgument>
+                        <InArgument x:TypeArguments="njl:JObject" x:Key="in_Validation">[I]</InArgument>
+                        <InArgument x:TypeArguments="x:Boolean" x:Key="in_HasReleaseIdColumn">[I.Value(Of Boolean)("hasReleaseIdColumn")]</InArgument>
+                        <InArgument x:TypeArguments="x:Boolean" x:Key="in_HasArtistIdColumn">[I.Value(Of Boolean)("hasArtistIdColumn")]</InArgument>
+                        <InArgument x:TypeArguments="x:Boolean" x:Key="in_HasReservationColumn">[If(I.Value(Of Boolean?)("hasReservationColumn"), False)]</InArgument>
+                        <OutArgument x:TypeArguments="x:String" x:Key="out_Outcome">[Outcome]</OutArgument>
+                        <OutArgument x:TypeArguments="x:String" x:Key="out_DbStatus">[DbStatus]</OutArgument>
+                        <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[Message]</OutArgument>
+                        <OutArgument x:TypeArguments="x:String" x:Key="out_PatchBody">[PatchBody]</OutArgument>
+                        <OutArgument x:TypeArguments="x:Boolean" x:Key="out_Enqueue">[Enqueue]</OutArgument>
+                        <OutArgument x:TypeArguments="x:String" x:Key="out_Reference">[Reference]</OutArgument>
+                        <OutArgument x:TypeArguments="scg:Dictionary(x:String, x:Object)" x:Key="out_QueueItemInformation">[QueueInfo]</OutArgument>
+                      </ui:InvokeWorkflowFile.Arguments>
+                    </ui:InvokeWorkflowFile>
+                  </Sequence>
+                </TryCatch.Try>
+                <TryCatch.Catches>
+                  <Catch x:TypeArguments="ui:BusinessRuleException" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+                    <ActivityAction x:TypeArguments="ui:BusinessRuleException">
+                      <ActivityAction.Argument>
+                        <DelegateInArgument x:TypeArguments="ui:BusinessRuleException" Name="businessException" />
+                      </ActivityAction.Argument>
+                      <Sequence DisplayName="Catch BusinessRuleException" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign Caught" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Caught]" Value="BusinessRuleException" />
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign CaughtMessage" sap2010:WorkflowViewState.IdRef="Assign_7" To="[CaughtMessage]" Value="[businessException.Message]" />
+                      </Sequence>
+                    </ActivityAction>
+                  </Catch>
+                  <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_2">
+                    <ActivityAction x:TypeArguments="s:Exception">
+                      <ActivityAction.Argument>
+                        <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+                      </ActivityAction.Argument>
+                      <Sequence DisplayName="Catch Exception" sap2010:WorkflowViewState.IdRef="Sequence_7">
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign Caught" sap2010:WorkflowViewState.IdRef="Assign_8" To="[Caught]" Value="[exception.GetType().Name]" />
+                        <Assign x:TypeArguments="x:String" DisplayName="Assign CaughtMessage" sap2010:WorkflowViewState.IdRef="Assign_9" To="[CaughtMessage]" Value="[exception.Message]" />
+                      </Sequence>
+                    </ActivityAction>
+                  </Catch>
+                </TryCatch.Catches>
+              </TryCatch>
+              <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Patch" sap2010:WorkflowViewState.IdRef="Assign_10" To="[Patch]" Value="[If(String.IsNullOrEmpty(PatchBody), New JObject(), JObject.Parse(PatchBody))]" />
+              <Assign x:TypeArguments="scg:List(x:String)" sap2010:Annotation.AnnotationText="Exception expectations first; output checks only when no exception was raised." DisplayName="Assign Problems" sap2010:WorkflowViewState.IdRef="Assign_11" To="[Problems]" Value="[If(E(&quot;exception&quot;) IsNot Nothing, If(Caught = E.Value(Of String)(&quot;exception&quot;), New List(Of String)(), New List(Of String) From {$&quot;expected exception {E.Value(Of String)(&quot;exception&quot;)} but got '{Caught}'&quot;}), If(Caught &lt;&gt; String.Empty, New List(Of String) From {$&quot;unexpected {Caught}: {CaughtMessage}&quot;}, {If(E(&quot;outcome&quot;) IsNot Nothing AndAlso Outcome &lt;&gt; E.Value(Of String)(&quot;outcome&quot;), $&quot;outcome={Outcome}&quot;, Nothing), If(E(&quot;dbStatus&quot;) IsNot Nothing AndAlso DbStatus &lt;&gt; E.Value(Of String)(&quot;dbStatus&quot;), $&quot;dbStatus={DbStatus}&quot;, Nothing), If(E(&quot;enqueue&quot;) IsNot Nothing AndAlso Enqueue &lt;&gt; E.Value(Of Boolean)(&quot;enqueue&quot;), $&quot;enqueue={Enqueue}&quot;, Nothing), If(E(&quot;reference&quot;) IsNot Nothing AndAlso Reference &lt;&gt; E.Value(Of String)(&quot;reference&quot;), $&quot;reference={Reference}&quot;, Nothing), If(E(&quot;messageStartsWith&quot;) IsNot Nothing AndAlso Not If(Message, String.Empty).StartsWith(E.Value(Of String)(&quot;messageStartsWith&quot;)), $&quot;message does not start with '{E.Value(Of String)(&quot;messageStartsWith&quot;)}': {Message}&quot;, Nothing), If(E(&quot;messageContains&quot;) IsNot Nothing AndAlso Not If(Message, String.Empty).Contains(E.Value(Of String)(&quot;messageContains&quot;)), $&quot;message lacks '{E.Value(Of String)(&quot;messageContains&quot;)}': {Message}&quot;, Nothing)}.Where(Function(p) p IsNot Nothing).Concat(If(E(&quot;patchHas&quot;) Is Nothing, Enumerable.Empty(Of String)(), E(&quot;patchHas&quot;).Select(Function(t) t.ToString()).Where(Function(k) Patch.Property(k) Is Nothing).Select(Function(k) $&quot;PATCH lacks '{k}': {PatchBody}&quot;))).Concat(If(E(&quot;patchHasNot&quot;) Is Nothing, Enumerable.Empty(Of String)(), E(&quot;patchHasNot&quot;).Select(Function(t) t.ToString()).Where(Function(k) Patch.Property(k) IsNot Nothing).Select(Function(k) $&quot;PATCH must not contain '{k}': {PatchBody}&quot;))).Concat(If(E(&quot;queue&quot;) Is Nothing, Enumerable.Empty(Of String)(), CType(E(&quot;queue&quot;), JObject).Properties().Where(Function(p) QueueInfo Is Nothing OrElse Not QueueInfo.ContainsKey(p.Name) OrElse Convert.ToString(QueueInfo(p.Name)) &lt;&gt; p.Value.ToString()).Select(Function(p) $&quot;queue field {p.Name}='{If(QueueInfo IsNot Nothing AndAlso QueueInfo.ContainsKey(p.Name), Convert.ToString(QueueInfo(p.Name)), &quot;(missing)&quot;)}' expected '{p.Value}'&quot;))).Concat(If(E(&quot;patchEquals&quot;) Is Nothing, Enumerable.Empty(Of String)(), CType(E(&quot;patchEquals&quot;), JObject).Properties().Where(Function(p) Patch.Property(p.Name) Is Nothing OrElse If(p.Value.Type = JTokenType.Null, Patch(p.Name).Type &lt;&gt; JTokenType.Null, Patch(p.Name).ToString() &lt;&gt; p.Value.ToString())).Select(Function(p) $&quot;PATCH {p.Name}={If(Patch.Property(p.Name) Is Nothing, &quot;(missing)&quot;, Patch(p.Name).ToString(Newtonsoft.Json.Formatting.None))} expected {p.Value.ToString(Newtonsoft.Json.Formatting.None)}&quot;))).ToList()))]" />
+              <Assign x:TypeArguments="scg:List(x:String)" DisplayName="Collect failures" sap2010:WorkflowViewState.IdRef="Assign_12" To="[Failures]" Value="[Failures.Concat(Problems.Select(Function(p) c.Value(Of String)(&quot;name&quot;) &amp; &quot;: &quot; &amp; p)).ToList()]" />
+              <Assign x:TypeArguments="x:Int32" DisplayName="Count case" sap2010:WorkflowViewState.IdRef="Assign_13" To="[CaseCount]" Value="[CaseCount + 1]" />
+              <ui:LogMessage DisplayName="Log case" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Info" Message="[If(Problems.Count = 0, &quot;PASS &quot;, &quot;FAIL &quot;) &amp; c.Value(Of String)(&quot;name&quot;) &amp; &quot; -&gt; &quot; &amp; If(Caught &lt;&gt; String.Empty, Caught, $&quot;{Outcome}/{DbStatus}/enqueue={Enqueue} PATCH {PatchBody}&quot;) &amp; If(Problems.Count = 0, String.Empty, &quot; :: &quot; &amp; String.Join(&quot;; &quot;, Problems))]" />
+            </Sequence>
+          </ActivityAction>
+        </ui:ForEach.Body>
+      </ui:ForEach>
+    </Sequence>
+    <Sequence DisplayName="... Then" sap2010:WorkflowViewState.IdRef="Sequence_8">
+      <ui:LogMessage DisplayName="Log summary" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;BuildValidationResult: {CaseCount} case(s), {Failures.Count} failure(s).&quot; &amp; If(Failures.Count = 0, String.Empty, &quot; &quot; &amp; String.Join(&quot; | &quot;, Failures))]" />
+      <uta:VerifyExpression AlternativeVerificationTitle="{x:Null}" KeepScreenshots="{x:Null}" OutputMessageFormat="{x:Null}" Result="{x:Null}" ScreenshotsPath="{x:Null}" ContinueOnFailure="False" DisplayName="Verify all cases pass" Expression="[CaseCount &gt; 0 AndAlso CaseCount = Cases.Count AndAlso Failures.Count = 0]" sap2010:WorkflowViewState.IdRef="VerifyExpression_1" TakeScreenshotInCaseOfFailingAssertion="False" TakeScreenshotInCaseOfSucceedingAssertion="False" />
+    </Sequence>
+  </Sequence>
+</Activity>

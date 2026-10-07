@@ -1,0 +1,32 @@
+[
+  {
+    "name": "valid payload with typed values",
+    "reference": "WL-42-S2",
+    "content": { "PayloadVersion": 1, "WishlistId": 42, "Submission": 2, "Artist": " Radiohead ", "Album": "OK Computer", "PreferredFormat": "flac" },
+    "expect": { "isValid": true, "wishlistId": 42, "submission": 2, "artist": "Radiohead", "album": "OK Computer", "preferredFormat": "FLAC" }
+  },
+  {
+    "name": "valid payload with string values and lower-case keys, no reference",
+    "reference": "",
+    "content": { "payloadversion": "1", "wishlistid": "7", "submission": "1", "artist": "Portishead", "album": "Dummy", "preferredformat": "ANY" },
+    "expect": { "isValid": true, "wishlistId": 7, "submission": 1, "artist": "Portishead", "album": "Dummy", "preferredFormat": "ANY" }
+  },
+  {
+    "name": "many problems at once",
+    "reference": "WL-1-S1",
+    "content": { "PayloadVersion": 2, "WishlistId": "abc", "Artist": "", "Album": "X", "PreferredFormat": "OGG" },
+    "expect": { "isValid": false, "reasonContains": [ "PayloadVersion '2'", "WishlistId 'abc'", "Submission ''", "Artist is empty", "'OGG'" ] }
+  },
+  {
+    "name": "reference does not match payload",
+    "reference": "WL-42-S1",
+    "content": { "PayloadVersion": 1, "WishlistId": 42, "Submission": 2, "Artist": "Radiohead", "Album": "OK Computer", "PreferredFormat": "FLAC" },
+    "expect": { "isValid": false, "reasonContains": [ "does not match payload (WL-42-S2)" ] }
+  },
+  {
+    "name": "no specific content",
+    "reference": "WL-42-S1",
+    "content": null,
+    "expect": { "isValid": false, "reasonContains": [ "specific content is missing" ] }
+  }
+]

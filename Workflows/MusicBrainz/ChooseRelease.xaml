@@ -1,0 +1,104 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_MusicBrainz_ChooseRelease" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="All releases of one release group, as returned by the MusicBrainz release browse with inc=media (each has id, status, date, country, media[].track-count)." Name="in_Releases" Type="InArgument(njl:JArray)" />
+    <x:Property sap2010:Annotation.AnnotationText="Optional: wishlist.chosen_release_id, set by a person to resolve RELEASE_CHOICE. When set, exactly that release is used (if it belongs to this release group); the automatic policy is skipped." Name="in_ChosenReleaseId" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="MBID of the chosen release. Empty when ambiguous." Name="out_ReleaseId" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Total track count of the chosen release (sum over all media). 0 when ambiguous." Name="out_TrackCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when no single release can be determined: a person has to set chosen_release_id." Name="out_IsAmbiguous" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="Why this release was chosen, or which candidates remain." Name="out_Reason" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Number of candidates left after the policy filters (official, earliest year); 1 when chosen_release_id was used." Name="out_CandidateCount" Type="OutArgument(x:Int32)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Release-selection policy (Documentation/Lyrebird_DataContract.md 11.4). No side effects. No tie-breaker: a release is chosen ONLY when exactly one candidate remains.&#xA;A. chosen_release_id set by a person: use exactly that release if it belongs to the group (any status), else ambiguous.&#xA;B. Otherwise: official releases only, keep those of the EARLIEST release year (no dated official release: keep all official ones).&#xA;   Exactly one left (with a track count) = chosen. Zero or several = AMBIGUOUS, the candidates are listed so a person can set chosen_release_id." DisplayName="Choose Release" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="s:Func(njl:JToken, x:Int32)" Name="TrackCountOf" />
+      <Variable x:TypeArguments="s:Func(njl:JToken, x:Int32)" Name="YearOf" />
+      <Variable x:TypeArguments="s:Func(njl:JToken, x:String)" Name="Describe" />
+      <Variable x:TypeArguments="scg:List(njl:JToken)" Name="AllReleases" />
+      <Variable x:TypeArguments="scg:List(njl:JToken)" Name="Official" />
+      <Variable x:TypeArguments="scg:List(njl:JToken)" Name="Dated" />
+      <Variable x:TypeArguments="x:Int32" Name="EarliestYear" />
+      <Variable x:TypeArguments="scg:List(njl:JToken)" Name="Group" />
+      <Variable x:TypeArguments="njl:JToken" Name="Chosen" />
+      <Variable x:TypeArguments="x:String" Name="ChosenId" />
+      <Variable x:TypeArguments="x:String" Name="YearLabel" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="Helpers" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="s:Func(njl:JToken, x:Int32)" sap2010:Annotation.AnnotationText="Sum of media[].track-count; missing = 0." DisplayName="Assign TrackCountOf" sap2010:WorkflowViewState.IdRef="Assign_1" To="[TrackCountOf]" Value="[Function(r As JToken) If(r(&quot;media&quot;) Is Nothing OrElse r(&quot;media&quot;).Type &lt;&gt; JTokenType.Array, 0, r(&quot;media&quot;).Sum(Function(m) If(m.Value(Of Integer?)(&quot;track-count&quot;), 0)))]" />
+      <Assign x:TypeArguments="s:Func(njl:JToken, x:Int32)" sap2010:Annotation.AnnotationText="Year of 'date' (YYYY, YYYY-MM or YYYY-MM-DD); 0 when missing." DisplayName="Assign YearOf" sap2010:WorkflowViewState.IdRef="Assign_2" To="[YearOf]" Value="[Function(r As JToken) If(Regex.IsMatch(If(r.Value(Of String)(&quot;date&quot;), String.Empty), &quot;^[0-9]{4}&quot;), CInt(r.Value(Of String)(&quot;date&quot;).Substring(0, 4)), 0)]" />
+      <Assign x:TypeArguments="s:Func(njl:JToken, x:String)" DisplayName="Assign Describe" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Describe]" Value="[Function(r As JToken) r.Value(Of String)(&quot;id&quot;) &amp; &quot; (&quot; &amp; If(r.Value(Of String)(&quot;date&quot;), &quot;no date&quot;) &amp; &quot;, &quot; &amp; If(r.Value(Of String)(&quot;country&quot;), &quot;?&quot;) &amp; &quot;, &quot; &amp; TrackCountOf(r).ToString() &amp; &quot; tracks&quot; &amp; If(String.IsNullOrWhiteSpace(r.Value(Of String)(&quot;disambiguation&quot;)), String.Empty, &quot;, &quot; &amp; r.Value(Of String)(&quot;disambiguation&quot;)) &amp; &quot;)&quot;]" />
+      <Assign x:TypeArguments="scg:List(njl:JToken)" DisplayName="Assign AllReleases" sap2010:WorkflowViewState.IdRef="Assign_4" To="[AllReleases]" Value="[If(in_Releases Is Nothing, New List(Of JToken)(), in_Releases.ToList())]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign ChosenId" sap2010:WorkflowViewState.IdRef="Assign_5" To="[ChosenId]" Value="[If(in_ChosenReleaseId, String.Empty).Trim()]" />
+    </Sequence>
+    <If Condition="[ChosenId &lt;&gt; String.Empty]" DisplayName="If a person chose the release" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="A. chosen_release_id" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <Assign x:TypeArguments="njl:JToken" DisplayName="Assign Chosen" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Chosen]" Value="[AllReleases.FirstOrDefault(Function(r) String.Equals(r.Value(Of String)(&quot;id&quot;), ChosenId, StringComparison.OrdinalIgnoreCase))]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_CandidateCount" sap2010:WorkflowViewState.IdRef="Assign_7" To="[out_CandidateCount]" Value="[If(Chosen Is Nothing, 0, 1)]" />
+          <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsAmbiguous" sap2010:WorkflowViewState.IdRef="Assign_8" To="[out_IsAmbiguous]" Value="[Chosen Is Nothing OrElse TrackCountOf(Chosen) &lt;= 0]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reason" sap2010:WorkflowViewState.IdRef="Assign_9" To="[out_Reason]" Value="[If(Chosen Is Nothing, $&quot;chosen_release_id {ChosenId} is not one of the {AllReleases.Count} release(s) of this release group; set it to a release of this album and resubmit.&quot;, If(TrackCountOf(Chosen) &lt;= 0, $&quot;chosen_release_id {ChosenId} has no track count on MusicBrainz; choose another release.&quot;, &quot;Release chosen by a person (chosen_release_id): &quot; &amp; Describe(Chosen) &amp; &quot;.&quot;))]" />
+        </Sequence>
+      </If.Then>
+      <If.Else>
+        <Sequence DisplayName="B. automatic policy" sap2010:WorkflowViewState.IdRef="Sequence_4">
+          <Assign x:TypeArguments="scg:List(njl:JToken)" DisplayName="Assign Official" sap2010:WorkflowViewState.IdRef="Assign_10" To="[Official]" Value="[AllReleases.Where(Function(r) String.Equals(r.Value(Of String)(&quot;status&quot;), &quot;Official&quot;, StringComparison.OrdinalIgnoreCase)).ToList()]" />
+          <Assign x:TypeArguments="scg:List(njl:JToken)" DisplayName="Assign Dated" sap2010:WorkflowViewState.IdRef="Assign_11" To="[Dated]" Value="[Official.Where(Function(r) YearOf(r) &gt; 0).ToList()]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign EarliestYear" sap2010:WorkflowViewState.IdRef="Assign_12" To="[EarliestYear]" Value="[If(Dated.Count &gt; 0, Dated.Min(Function(r) YearOf(r)), 0)]" />
+          <Assign x:TypeArguments="scg:List(njl:JToken)" DisplayName="Assign Group" sap2010:WorkflowViewState.IdRef="Assign_13" To="[Group]" Value="[If(Dated.Count &gt; 0, Dated.Where(Function(r) YearOf(r) = EarliestYear).ToList(), Official)]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign YearLabel" sap2010:WorkflowViewState.IdRef="Assign_14" To="[YearLabel]" Value="[If(EarliestYear &gt; 0, EarliestYear.ToString(), &quot;no release dates&quot;)]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_CandidateCount" sap2010:WorkflowViewState.IdRef="Assign_15" To="[out_CandidateCount]" Value="[Group.Count]" />
+          <Assign x:TypeArguments="njl:JToken" sap2010:Annotation.AnnotationText="Only a single remaining candidate is ever chosen - no tie-breaker." DisplayName="Assign Chosen" sap2010:WorkflowViewState.IdRef="Assign_16" To="[Chosen]" Value="[If(Group.Count = 1 AndAlso TrackCountOf(Group(0)) &gt; 0, Group(0), Nothing)]" />
+          <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsAmbiguous" sap2010:WorkflowViewState.IdRef="Assign_17" To="[out_IsAmbiguous]" Value="[Chosen Is Nothing]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reason" sap2010:WorkflowViewState.IdRef="Assign_18" To="[out_Reason]" Value="[If(Official.Count = 0, $&quot;No official release among {AllReleases.Count} release(s); set chosen_release_id and resubmit.&quot;, If(Chosen IsNot Nothing, &quot;Only official release of the original year (&quot; &amp; YearLabel &amp; &quot;): &quot; &amp; Describe(Chosen) &amp; $&quot;; {Official.Count - 1} later official and {AllReleases.Count - Official.Count} non-official release(s) ignored.&quot;, If(Group.Count = 1, $&quot;The only official release of the original year ({YearLabel}) has no track count: &quot; &amp; Describe(Group(0)) &amp; &quot;. Set chosen_release_id and resubmit.&quot;, $&quot;{Group.Count} official releases in the original year ({YearLabel}); set chosen_release_id to one of: &quot; &amp; String.Join(&quot;; &quot;, Group.OrderBy(Function(r) If(r.Value(Of String)(&quot;date&quot;), &quot;~&quot;), StringComparer.Ordinal).Take(8).Select(Function(r) Describe(r))) &amp; If(Group.Count &gt; 8, $&quot; and {Group.Count - 8} more&quot;, String.Empty) &amp; &quot;. Then resubmit.&quot;)))]" />
+        </Sequence>
+      </If.Else>
+    </If>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_ReleaseId" sap2010:WorkflowViewState.IdRef="Assign_19" To="[out_ReleaseId]" Value="[If(out_IsAmbiguous OrElse Chosen Is Nothing, String.Empty, If(Chosen.Value(Of String)(&quot;id&quot;), String.Empty))]" />
+    <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_TrackCount" sap2010:WorkflowViewState.IdRef="Assign_20" To="[out_TrackCount]" Value="[If(out_IsAmbiguous OrElse Chosen Is Nothing, 0, TrackCountOf(Chosen))]" />
+  </Sequence>
+</Activity>

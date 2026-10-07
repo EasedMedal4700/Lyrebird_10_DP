@@ -112,6 +112,48 @@
         "testCaseType": "TestCase",
         "executionTemplateType": "Local",
         "fileName": "Tests\\SecureStringConversionGuardTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "656b6709-fd08-42c1-be9d-40769faada60",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\ParseValidatePayloadTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "b85af55e-6f90-4159-8606-3c788fe17ee1",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\DecideRowActionTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "539b6d9e-8088-4d93-9490-19317151b276",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\ChooseReleaseTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "4a5b6424-613e-480b-82a5-9a8db8e836c8",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\BuildValidationResultTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "84461eb2-2758-4870-8486-9f237d722d50",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\ProcessValidateQueueItemIntegrationTestCase.xaml"
+      },
+      {
+        "editingStatus": "InProgress",
+        "testCaseId": "97f6ffab-1075-4ff3-985e-4924bf608831",
+        "testCaseType": "TestCase",
+        "executionTemplateType": "Local",
+        "fileName": "Tests\\ProcessValidateScenarioIntegrationTestCase.xaml"
       }
     ],
     "saveToCloud": false

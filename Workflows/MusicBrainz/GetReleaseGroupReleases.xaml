@@ -1,0 +1,143 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_MusicBrainz_GetReleaseGroupReleases" this:Workflows_MusicBrainz_GetReleaseGroupReleases.in_MaxPages="10" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:s="clr-namespace:System;assembly=System.Private.CoreLib" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:this="clr-namespace:" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:uwah="clr-namespace:UiPath.Web.Activities.Http;assembly=UiPath.Web.Activities" xmlns:uwahm="clr-namespace:UiPath.Web.Activities.Http.Models;assembly=UiPath.Web.Activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="Release GROUP MBID (from ValidateAlbum out_ReleaseGroupMbid)." Name="in_ReleaseGroupMbid" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="User-Agent from GetUserAgent.xaml (required)." Name="in_UserAgent" Type="InArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Same variable as for ValidateAlbum, so all MusicBrainz requests together stay at most one per second." Name="io_LastRequestUtc" Type="InOutArgument(s:DateTime)" />
+    <x:Property sap2010:Annotation.AnnotationText="Maximum pages of 100 releases. Default 10 (1000 releases)." Name="in_MaxPages" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="All releases fetched (any status), each with media[].track-count." Name="out_Releases" Type="OutArgument(njl:JArray)" />
+    <x:Property sap2010:Annotation.AnnotationText="release-count reported by MusicBrainz." Name="out_TotalCount" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="False when not all releases could be fetched within in_MaxPages; the caller must then NOT choose a release." Name="out_IsComplete" Type="OutArgument(x:Boolean)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Net</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+      <x:String>UiPath.Web.Activities</x:String>
+      <x:String>UiPath.Web.Activities.Http</x:String>
+      <x:String>UiPath.Web.Activities.Http.Models</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Net.Primitives</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Private.Uri</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Web.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Fetches all releases of one release group from MusicBrainz (browse /ws/2/release?release-group=&lt;id&gt;&amp;inc=media), 100 per page.&#xA;Throttle: waits until 1.1 s after io_LastRequestUtc before EVERY page and updates it after every page, also on failure (same rule as ValidateAlbum). The HTTP activity's own retries (Basic policy) wait at least 1.1 s or the server's Retry-After.&#xA;Any request failure or non-2xx status throws a System exception: technical, retryable by the queue.&#xA;Not filtered by status in the URL; ChooseRelease keeps only Official releases." DisplayName="MusicBrainz Get Release Group Releases" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="https://musicbrainz.org/ws/2/release" Name="BaseUrl" />
+      <Variable x:TypeArguments="x:TimeSpan" Default="[TimeSpan.FromMilliseconds(1100)]" Name="MinInterval" />
+      <Variable x:TypeArguments="x:Int32" Default="100" Name="PageSize" />
+      <Variable x:TypeArguments="x:Int32" Name="Offset" />
+      <Variable x:TypeArguments="x:Int32" Name="Page" />
+      <Variable x:TypeArguments="x:Int32" Name="Returned" />
+      <Variable x:TypeArguments="x:Int32" Name="Total" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <If Condition="[Not Regex.IsMatch(If(in_ReleaseGroupMbid, String.Empty), &quot;^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$&quot;) OrElse String.IsNullOrWhiteSpace(in_UserAgent)]" DisplayName="If arguments are invalid" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw DisplayName="Throw invalid arguments" Exception="[New ArgumentException($&quot;GetReleaseGroupReleases needs a release group MBID and a User-Agent (got '{in_ReleaseGroupMbid}').&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <Assign x:TypeArguments="njl:JArray" DisplayName="Assign out_Releases" sap2010:WorkflowViewState.IdRef="Assign_1" To="[out_Releases]" Value="[New JArray()]" />
+    <ui:InterruptibleDoWhile DisplayName="Do While more pages" sap2010:WorkflowViewState.IdRef="InterruptibleDoWhile_1">
+      <ui:InterruptibleDoWhile.Body>
+        <Sequence DisplayName="Body" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <Sequence.Variables>
+            <Variable x:TypeArguments="x:String" Name="RequestUrl" />
+            <Variable x:TypeArguments="x:TimeSpan" Name="Wait" />
+            <Variable x:TypeArguments="uwahm:HttpResponseSummary" Name="Response" />
+            <Variable x:TypeArguments="njl:JObject" Name="Json" />
+          </Sequence.Variables>
+          <Assign x:TypeArguments="x:String" DisplayName="Assign RequestUrl" sap2010:WorkflowViewState.IdRef="Assign_2" To="[RequestUrl]" Value="[$&quot;{BaseUrl}?release-group={in_ReleaseGroupMbid}&amp;inc=media&amp;fmt=json&amp;limit={PageSize}&amp;offset={Offset}&quot;]" />
+          <Assign x:TypeArguments="x:TimeSpan" DisplayName="Assign Wait" sap2010:WorkflowViewState.IdRef="Assign_3" To="[Wait]" Value="[MinInterval - (DateTime.UtcNow - io_LastRequestUtc)]" />
+          <If Condition="[Wait &gt; TimeSpan.Zero]" DisplayName="If last request was less than 1.1 s ago" sap2010:WorkflowViewState.IdRef="If_2">
+            <If.Then>
+              <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_4">
+                <Delay DisplayName="Delay for MusicBrainz rate limit" Duration="[Wait]" sap2010:WorkflowViewState.IdRef="Delay_1" />
+              </Sequence>
+            </If.Then>
+          </If>
+          <TryCatch DisplayName="Try call MusicBrainz" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+            <TryCatch.Try>
+              <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_5">
+                <uwah:NetHttpRequest BasicAuthPassword="{x:Null}" BasicAuthSecurePassword="{x:Null}" BasicAuthUsername="{x:Null}" BinaryPayload="{x:Null}" ClientCertPassword="{x:Null}" ClientCertPath="{x:Null}" ClientCertSecurePassword="{x:Null}" Cookies="{x:Null}" CustomNegotiatedAuthCredentials="{x:Null}" FilePath="{x:Null}" FormData="{x:Null}" LocalFiles="{x:Null}" OAuthToken="{x:Null}" OutputFileName="{x:Null}" OutputFileTargetFolder="{x:Null}" Parameters="{x:Null}" PathResource="{x:Null}" ProxyConfiguration="{x:Null}" ResourceFiles="{x:Null}" TextPayload="{x:Null}" AuthenticationType="None" ContinueOnError="False" DisableSslVerification="False" DisplayName="HTTP GET MusicBrainz releases of group" EnableCookies="True" FileOverwrite="AutoRename" FollowRedirects="True" FormDataParts="[New List (Of FormDataPart) From _&#xA;{&#xA;&#x9;New FileFormDataPart(),&#xA;&#x9;New BinaryFormDataPart(),&#xA;&#x9;New TextFormDataPart()&#xA;}]" Headers="[New Dictionary(Of String, String) From { {&quot;User-Agent&quot;, in_UserAgent}, {&quot;Accept&quot;, &quot;application/json&quot;} }]" sap2010:WorkflowViewState.IdRef="NetHttpRequest_1" InitialDelay="1100" MaxRedirects="3" MaxRetryAfterDelay="30000" Method="GET" Multiplier="2" PreferRetryAfterValue="True" RequestBodyType="None" RequestUrl="[RequestUrl]" Result="[Response]" RetryCount="[3]" RetryPolicyType="Basic" RetryStatusCodes="[New List (Of System.Net.HttpStatusCode) From _&#xA;{&#xA;&#x9;System.Net.HttpStatusCode.RequestTimeout,&#xA;&#x9;System.Net.HttpStatusCode.TooManyRequests,&#xA;&#x9;System.Net.HttpStatusCode.InternalServerError,&#xA;&#x9;System.Net.HttpStatusCode.BadGateway,&#xA;&#x9;System.Net.HttpStatusCode.ServiceUnavailable,&#xA;&#x9;System.Net.HttpStatusCode.GatewayTimeout&#xA;}]" SaveRawRequestResponse="False" SaveResponseAsFile="False" TextPayloadContentType="application/json" TextPayloadEncoding="UTF-8" TimeoutInMiliseconds="[30000]" TlsProtocol="Automatic" UseJitter="True" UseOsNegotiatedAuthCredentials="True" />
+                <Assign x:TypeArguments="s:DateTime" DisplayName="Assign io_LastRequestUtc" sap2010:WorkflowViewState.IdRef="Assign_4" To="[io_LastRequestUtc]" Value="[DateTime.UtcNow]" />
+              </Sequence>
+            </TryCatch.Try>
+            <TryCatch.Catches>
+              <Catch x:TypeArguments="s:Exception" sap2010:WorkflowViewState.IdRef="Catch`1_1">
+                <ActivityAction x:TypeArguments="s:Exception">
+                  <ActivityAction.Argument>
+                    <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
+                  </ActivityAction.Argument>
+                  <Sequence DisplayName="Catch" sap2010:WorkflowViewState.IdRef="Sequence_6">
+                    <Assign x:TypeArguments="s:DateTime" DisplayName="Assign io_LastRequestUtc" sap2010:WorkflowViewState.IdRef="Assign_5" To="[io_LastRequestUtc]" Value="[DateTime.UtcNow]" />
+                    <ui:LogMessage DisplayName="Log request failed" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Error" Message="[$&quot;MusicBrainz release lookup failed ({exception.GetType().Name}): {exception.Message}&quot;]" />
+                    <Rethrow DisplayName="Rethrow request failed" sap2010:WorkflowViewState.IdRef="Rethrow_1" />
+                  </Sequence>
+                </ActivityAction>
+              </Catch>
+            </TryCatch.Catches>
+          </TryCatch>
+          <If Condition="[CInt(Response.StatusCode) &lt; 200 OrElse CInt(Response.StatusCode) &gt;= 300]" DisplayName="If MusicBrainz returned an error" sap2010:WorkflowViewState.IdRef="If_3">
+            <If.Then>
+              <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_7">
+                <Throw DisplayName="Throw HTTP error (retryable)" Exception="[New Exception($&quot;MusicBrainz release lookup for release group {in_ReleaseGroupMbid} returned HTTP {CInt(Response.StatusCode)}: &quot; &amp; If(String.IsNullOrEmpty(Response.TextContent), String.Empty, Response.TextContent.Substring(0, Math.Min(300, Response.TextContent.Length))))]" sap2010:WorkflowViewState.IdRef="Throw_2" />
+              </Sequence>
+            </If.Then>
+          </If>
+          <ui:DeserializeJson x:TypeArguments="njl:JObject" JsonSample="{x:Null}" Settings="{x:Null}" DisplayName="Deserialize page" sap2010:WorkflowViewState.IdRef="DeserializeJson_1" JsonObject="[Json]" JsonString="[Response.TextContent]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign Returned" sap2010:WorkflowViewState.IdRef="Assign_6" To="[Returned]" Value="[If(Json(&quot;releases&quot;) Is Nothing, 0, Json(&quot;releases&quot;).Count())]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign Total" sap2010:WorkflowViewState.IdRef="Assign_7" To="[Total]" Value="[If(Json.Value(Of Integer?)(&quot;release-count&quot;), 0)]" />
+          <Assign x:TypeArguments="njl:JArray" DisplayName="Append releases" sap2010:WorkflowViewState.IdRef="Assign_8" To="[out_Releases]" Value="[If(Returned = 0, out_Releases, New JArray(out_Releases.Concat(Json(&quot;releases&quot;))))]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign Offset" sap2010:WorkflowViewState.IdRef="Assign_9" To="[Offset]" Value="[Offset + Returned]" />
+          <Assign x:TypeArguments="x:Int32" DisplayName="Assign Page" sap2010:WorkflowViewState.IdRef="Assign_10" To="[Page]" Value="[Page + 1]" />
+        </Sequence>
+      </ui:InterruptibleDoWhile.Body>
+      <ui:InterruptibleDoWhile.Condition>[Returned &gt; 0 AndAlso Offset &lt; Total AndAlso Page &lt; in_MaxPages]</ui:InterruptibleDoWhile.Condition>
+    </ui:InterruptibleDoWhile>
+    <Assign x:TypeArguments="x:Int32" DisplayName="Assign out_TotalCount" sap2010:WorkflowViewState.IdRef="Assign_11" To="[out_TotalCount]" Value="[Total]" />
+    <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_IsComplete" sap2010:WorkflowViewState.IdRef="Assign_12" To="[out_IsComplete]" Value="[out_Releases.Count &gt;= Total]" />
+    <ui:LogMessage DisplayName="Log releases fetched" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;MusicBrainz: fetched {out_Releases.Count} of {Total} release(s) of release group {in_ReleaseGroupMbid} in {Page} page(s){If(out_IsComplete, String.Empty, &quot; - INCOMPLETE, no release will be chosen&quot;)}.&quot;]" />
+  </Sequence>
+</Activity>

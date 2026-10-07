@@ -1,0 +1,88 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_Wishlist_DecideRowAction" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:njl="clr-namespace:Newtonsoft.Json.Linq;assembly=Newtonsoft.Json" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="WishlistId from the queue payload." Name="in_WishlistId" Type="InArgument(x:Int64)" />
+    <x:Property sap2010:Annotation.AnnotationText="Submission from the queue payload." Name="in_Submission" Type="InArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="The wishlist row read with select=* (Nothing when Supabase returned no row)." Name="in_Row" Type="InArgument(njl:JToken)" />
+    <x:Property sap2010:Annotation.AnnotationText="process | already_completed | stale_submission | submission_ahead | missing_row | unexpected_status" Name="out_Action" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Human-readable explanation of the action." Name="out_Reason" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Current status of the row (empty when missing)." Name="out_RowStatus" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="Current submission of the row; 1 when the column does not exist or is null." Name="out_RowSubmission" Type="OutArgument(x:Int32)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has a 'submission' column (proposed migration). Updates then also filter on it." Name="out_HasSubmissionColumn" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has an 'mb_release_id' column (proposed migration)." Name="out_HasReleaseIdColumn" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has an 'mb_artist_id' column (proposed migration)." Name="out_HasArtistIdColumn" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="Exact text of updated_at, read as 'row_version:updated_at::text' (empty when the row was read without it). Used as an optimistic-concurrency guard: any edit changes it." Name="out_RowVersion" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="True when the row has a 'reserved_release_group' column (album reservation, migration 2026-10-07_01)." Name="out_HasReservationColumn" Type="OutArgument(x:Boolean)" />
+    <x:Property sap2010:Annotation.AnnotationText="Release group this row currently reserves (empty = none)." Name="out_ReservedReleaseGroup" Type="OutArgument(x:String)" />
+    <x:Property sap2010:Annotation.AnnotationText="chosen_release_id set by a person (empty = none)." Name="out_ChosenReleaseId" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>Newtonsoft.Json.Linq</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Collections.ObjectModel</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>System.Text.RegularExpressions</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>Newtonsoft.Json</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>System.Text.RegularExpressions</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Decides what to do with a Lyrebird_Validate item, given the current wishlist row. No side effects.&#xA;&#xA;- missing_row: no row (or another id) - nothing to validate.&#xA;- stale_submission: the row has a newer submission - this item is obsolete, do nothing.&#xA;- submission_ahead: the item has a newer submission than the row - inconsistent, needs a human.&#xA;- already_completed: same submission and the row is no longer 'new' (an earlier attempt finished) - do nothing.&#xA;- process: same submission and status 'new'.&#xA;- unexpected_status: a status this process does not know.&#xA;&#xA;Also used after a zero-row update to tell 'already persisted' from 'changed by someone else'." DisplayName="Decide Row Action" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="njl:JObject" Name="Row" />
+      <Variable x:TypeArguments="x:String" Name="RowIdText" />
+      <Variable x:TypeArguments="x:String" Name="SubmissionText" />
+      <Variable x:TypeArguments="scg:List(x:String)" Default="[New List(Of String) From {&quot;queued&quot;, &quot;downloading&quot;, &quot;downloaded&quot;, &quot;tagged&quot;, &quot;uploaded&quot;, &quot;check_spelling&quot;, &quot;not_found&quot;, &quot;failed&quot;}]" Name="CompletedStatuses" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <Sequence DisplayName="Read row" sap2010:WorkflowViewState.IdRef="Sequence_2">
+      <Assign x:TypeArguments="njl:JObject" DisplayName="Assign Row" sap2010:WorkflowViewState.IdRef="Assign_1" To="[Row]" Value="[TryCast(in_Row, JObject)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign RowIdText" sap2010:WorkflowViewState.IdRef="Assign_2" To="[RowIdText]" Value="[If(Row Is Nothing, String.Empty, If(Row.Value(Of String)(&quot;id&quot;), String.Empty).Trim())]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_RowStatus" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_RowStatus]" Value="[If(Row Is Nothing, String.Empty, If(Row.Value(Of String)(&quot;status&quot;), String.Empty).Trim().ToLowerInvariant())]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_HasSubmissionColumn" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_HasSubmissionColumn]" Value="[Row IsNot Nothing AndAlso Row.ContainsKey(&quot;submission&quot;)]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_HasReleaseIdColumn" sap2010:WorkflowViewState.IdRef="Assign_5" To="[out_HasReleaseIdColumn]" Value="[Row IsNot Nothing AndAlso Row.ContainsKey(&quot;mb_release_id&quot;)]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_HasArtistIdColumn" sap2010:WorkflowViewState.IdRef="Assign_6" To="[out_HasArtistIdColumn]" Value="[Row IsNot Nothing AndAlso Row.ContainsKey(&quot;mb_artist_id&quot;)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_RowVersion" sap2010:WorkflowViewState.IdRef="Assign_11" To="[out_RowVersion]" Value="[If(Row Is Nothing, String.Empty, If(Row.Value(Of String)(&quot;row_version&quot;), String.Empty).Trim())]" />
+      <Assign x:TypeArguments="x:Boolean" DisplayName="Assign out_HasReservationColumn" sap2010:WorkflowViewState.IdRef="Assign_12" To="[out_HasReservationColumn]" Value="[Row IsNot Nothing AndAlso Row.ContainsKey(&quot;reserved_release_group&quot;)]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_ReservedReleaseGroup" sap2010:WorkflowViewState.IdRef="Assign_13" To="[out_ReservedReleaseGroup]" Value="[If(Row Is Nothing, String.Empty, If(Row.Value(Of String)(&quot;reserved_release_group&quot;), String.Empty).Trim())]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign out_ChosenReleaseId" sap2010:WorkflowViewState.IdRef="Assign_14" To="[out_ChosenReleaseId]" Value="[If(Row Is Nothing, String.Empty, If(Row.Value(Of String)(&quot;chosen_release_id&quot;), String.Empty).Trim())]" />
+      <Assign x:TypeArguments="x:String" DisplayName="Assign SubmissionText" sap2010:WorkflowViewState.IdRef="Assign_7" To="[SubmissionText]" Value="[If(Row Is Nothing, String.Empty, If(Row.Value(Of String)(&quot;submission&quot;), String.Empty).Trim())]" />
+      <Assign x:TypeArguments="x:Int32" sap2010:Annotation.AnnotationText="Missing column or null = 1, the same default the loader uses for the Reference." DisplayName="Assign out_RowSubmission" sap2010:WorkflowViewState.IdRef="Assign_8" To="[out_RowSubmission]" Value="[If(SubmissionText = String.Empty, 1, If(Regex.IsMatch(SubmissionText, &quot;^[0-9]{1,6}$&quot;), CInt(SubmissionText), 0))]" />
+    </Sequence>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Action" sap2010:WorkflowViewState.IdRef="Assign_9" To="[out_Action]" Value="[If(Row Is Nothing OrElse RowIdText &lt;&gt; in_WishlistId.ToString(), &quot;missing_row&quot;, If(out_RowSubmission &lt; 1, &quot;unexpected_status&quot;, If(out_RowSubmission &gt; in_Submission, &quot;stale_submission&quot;, If(out_RowSubmission &lt; in_Submission, &quot;submission_ahead&quot;, If(out_RowStatus = &quot;new&quot;, &quot;process&quot;, If(CompletedStatuses.Contains(out_RowStatus), &quot;already_completed&quot;, &quot;unexpected_status&quot;))))))]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign out_Reason" sap2010:WorkflowViewState.IdRef="Assign_10" To="[out_Reason]" Value="[If(out_Action = &quot;missing_row&quot;, $&quot;Wishlist row {in_WishlistId} does not exist.&quot;, If(out_Action = &quot;stale_submission&quot;, $&quot;Wishlist row {in_WishlistId} has submission {out_RowSubmission}; this item is for submission {in_Submission} and is obsolete.&quot;, If(out_Action = &quot;submission_ahead&quot;, $&quot;Item is for submission {in_Submission} but wishlist row {in_WishlistId} has submission {out_RowSubmission}.&quot;, If(out_Action = &quot;already_completed&quot;, $&quot;Wishlist row {in_WishlistId} submission {in_Submission} is already '{out_RowStatus}'.&quot;, If(out_Action = &quot;process&quot;, $&quot;Wishlist row {in_WishlistId} submission {in_Submission} is 'new'.&quot;, $&quot;Wishlist row {in_WishlistId} has unexpected status '{out_RowStatus}' / submission '{SubmissionText}'.&quot;)))))]" />
+  </Sequence>
+</Activity>

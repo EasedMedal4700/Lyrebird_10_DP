@@ -1,0 +1,90 @@
+<Activity mc:Ignorable="sap sap2010" x:Class="Workflows_MusicBrainz_GetUserAgent" xmlns="http://schemas.microsoft.com/netfx/2009/xaml/activities" xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:sap="http://schemas.microsoft.com/netfx/2009/xaml/activities/presentation" xmlns:sap2010="http://schemas.microsoft.com/netfx/2010/xaml/activities/presentation" xmlns:scg="clr-namespace:System.Collections.Generic;assembly=System.Private.CoreLib" xmlns:ui="http://schemas.uipath.com/workflow/activities" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <x:Members>
+    <x:Property sap2010:Annotation.AnnotationText="'&lt;10_DP_MusicBrainzUserAgent&gt; ( &lt;PersonalEmail&gt; )', or only the app name when the email asset is empty." Name="out_UserAgent" Type="OutArgument(x:String)" />
+  </x:Members>
+  <VisualBasic.Settings>
+    <x:Null />
+  </VisualBasic.Settings>
+  <sap2010:WorkflowViewState.IdRef>ActivityBuilder_1</sap2010:WorkflowViewState.IdRef>
+  <TextExpression.NamespacesForImplementation>
+    <scg:List x:TypeArguments="x:String" Capacity="32">
+      <x:String>GlobalConstantsNamespace</x:String>
+      <x:String>GlobalVariablesNamespace</x:String>
+      <x:String>Microsoft.VisualBasic</x:String>
+      <x:String>Microsoft.VisualBasic.Activities</x:String>
+      <x:String>System</x:String>
+      <x:String>System.Activities</x:String>
+      <x:String>System.Activities.Expressions</x:String>
+      <x:String>System.Activities.Statements</x:String>
+      <x:String>System.Collections.Generic</x:String>
+      <x:String>System.Linq</x:String>
+      <x:String>UiPath.Core</x:String>
+      <x:String>UiPath.Core.Activities</x:String>
+    </scg:List>
+  </TextExpression.NamespacesForImplementation>
+  <TextExpression.ReferencesForImplementation>
+    <scg:List x:TypeArguments="AssemblyReference" Capacity="32">
+      <AssemblyReference>Microsoft.VisualBasic</AssemblyReference>
+      <AssemblyReference>System</AssemblyReference>
+      <AssemblyReference>System.Activities</AssemblyReference>
+      <AssemblyReference>System.Collections</AssemblyReference>
+      <AssemblyReference>System.Core</AssemblyReference>
+      <AssemblyReference>System.Linq</AssemblyReference>
+      <AssemblyReference>System.Private.CoreLib</AssemblyReference>
+      <AssemblyReference>System.Runtime</AssemblyReference>
+      <AssemblyReference>UiPath.System.Activities</AssemblyReference>
+      <AssemblyReference>UiPath.Workflow</AssemblyReference>
+      <AssemblyReference>System.ObjectModel</AssemblyReference>
+      <AssemblyReference>System.ComponentModel.TypeConverter</AssemblyReference>
+    </scg:List>
+  </TextExpression.ReferencesForImplementation>
+  <Sequence sap2010:Annotation.AnnotationText="Builds the MusicBrainz User-Agent from assets, with the same rules as ValidateAlbum.xaml (which keeps its own fallback for standalone use):&#xA;- 10_DP_MusicBrainzUserAgent (folder Lyrebird) is required: empty = exception.&#xA;- PersonalEmail (folder Shared) is optional: empty = warning, User-Agent without contact.&#xA;Resolve it once per item and pass it to ValidateAlbum (in_UserAgent) and GetReleaseGroupReleases." DisplayName="MusicBrainz Get User-Agent" sap2010:WorkflowViewState.IdRef="Sequence_1">
+    <Sequence.Variables>
+      <Variable x:TypeArguments="x:String" Default="Lyrebird" Name="AssetFolder" />
+      <Variable x:TypeArguments="x:String" Default="10_DP_MusicBrainzUserAgent" Name="UserAgentAssetName" />
+      <Variable x:TypeArguments="x:String" Default="Shared" Name="SharedAssetFolder" />
+      <Variable x:TypeArguments="x:String" Default="PersonalEmail" Name="EmailAssetName" />
+      <Variable x:TypeArguments="x:Object" Name="UserAgentValue" />
+      <Variable x:TypeArguments="x:Object" Name="EmailValue" />
+      <Variable x:TypeArguments="x:String" Name="AppName" />
+      <Variable x:TypeArguments="x:String" Name="ContactEmail" />
+    </Sequence.Variables>
+    <sap:WorkflowViewStateService.ViewState>
+      <scg:Dictionary x:TypeArguments="x:String, x:Object">
+        <x:Boolean x:Key="IsExpanded">True</x:Boolean>
+      </scg:Dictionary>
+    </sap:WorkflowViewStateService.ViewState>
+    <ui:GetRobotAsset TimeoutMS="{x:Null}" AssetName="[UserAgentAssetName]" CacheStrategy="None" DisplayName="Get Asset 10_DP_MusicBrainzUserAgent" FolderPath="[AssetFolder]" sap2010:WorkflowViewState.IdRef="GetRobotAsset_1">
+      <ui:GetRobotAsset.Value>
+        <OutArgument x:TypeArguments="x:Object">[UserAgentValue]</OutArgument>
+      </ui:GetRobotAsset.Value>
+    </ui:GetRobotAsset>
+    <ui:GetRobotAsset TimeoutMS="{x:Null}" AssetName="[EmailAssetName]" CacheStrategy="None" DisplayName="Get Asset PersonalEmail" FolderPath="[SharedAssetFolder]" sap2010:WorkflowViewState.IdRef="GetRobotAsset_2">
+      <ui:GetRobotAsset.Value>
+        <OutArgument x:TypeArguments="x:Object">[EmailValue]</OutArgument>
+      </ui:GetRobotAsset.Value>
+    </ui:GetRobotAsset>
+    <Assign x:TypeArguments="x:String" DisplayName="Assign AppName" sap2010:WorkflowViewState.IdRef="Assign_1" To="[AppName]" Value="[If(UserAgentValue Is Nothing, String.Empty, UserAgentValue.ToString().Trim())]" />
+    <Assign x:TypeArguments="x:String" DisplayName="Assign ContactEmail" sap2010:WorkflowViewState.IdRef="Assign_2" To="[ContactEmail]" Value="[If(EmailValue Is Nothing, String.Empty, EmailValue.ToString().Trim())]" />
+    <If Condition="[String.IsNullOrWhiteSpace(AppName)]" DisplayName="If User-Agent asset is empty" sap2010:WorkflowViewState.IdRef="If_1">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_2">
+          <Throw DisplayName="Throw missing User-Agent" Exception="[New Exception($&quot;MusicBrainz asset '{UserAgentAssetName}' in folder '{AssetFolder}' is empty.&quot;)]" sap2010:WorkflowViewState.IdRef="Throw_1" />
+        </Sequence>
+      </If.Then>
+    </If>
+    <If Condition="[String.IsNullOrWhiteSpace(ContactEmail)]" DisplayName="If contact email is empty" sap2010:WorkflowViewState.IdRef="If_2">
+      <If.Then>
+        <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_3">
+          <ui:LogMessage DisplayName="Log missing contact" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Warn" Message="[$&quot;MusicBrainz: asset '{EmailAssetName}' in folder '{SharedAssetFolder}' is empty, sending User-Agent without contact.&quot;]" />
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_UserAgent without contact" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_UserAgent]" Value="[AppName]" />
+        </Sequence>
+      </If.Then>
+      <If.Else>
+        <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_4">
+          <Assign x:TypeArguments="x:String" DisplayName="Assign out_UserAgent with contact" sap2010:WorkflowViewState.IdRef="Assign_4" To="[out_UserAgent]" Value="[$&quot;{AppName} ( {ContactEmail} )&quot;]" />
+        </Sequence>
+      </If.Else>
+    </If>
+  </Sequence>
+</Activity>
