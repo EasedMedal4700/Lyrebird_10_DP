@@ -45,11 +45,11 @@
       <AssemblyReference>UiPath.Workflow</AssemblyReference>
     </scg:List>
   </TextExpression.ReferencesForImplementation>
-  <Sequence sap2010:Annotation.AnnotationText="Builds the Supabase connection details from Orchestrator assets only (no Config.xlsx).&#xA;&#xA;Assets (folder Lyrebird):&#xA;- 10_DP_SupabaseUrl (Text)&#xA;- 10_DP_SupabaseApiKey (Secret)" DisplayName="Get Supabase Connection" sap2010:WorkflowViewState.IdRef="Sequence_1">
+  <Sequence sap2010:Annotation.AnnotationText="Builds the Supabase connection details from Orchestrator assets only (no Config.xlsx).&#xA;&#xA;Shared Lyrebird assets (folder Lyrebird), since 2026-10-08:&#xA;- 00_SH_SupabaseUrl (Text)&#xA;- 00_SH_SupabaseApiKey (Secret, same value and credential store as the former 10_DP_SupabaseApiKey)&#xA;The deprecated 10_DP_SupabaseUrl / 10_DP_SupabaseApiKey are kept for rollback and for the published package 26.10.0 until it is republished (see Documentation/Lyrebird_DataContract.md section 14)." DisplayName="Get Supabase Connection" sap2010:WorkflowViewState.IdRef="Sequence_1">
     <Sequence.Variables>
       <Variable x:TypeArguments="x:String" Default="Lyrebird" Name="AssetFolder" />
-      <Variable x:TypeArguments="x:String" Default="10_DP_SupabaseUrl" Name="UrlAssetName" />
-      <Variable x:TypeArguments="x:String" Default="10_DP_SupabaseApiKey" Name="ApiKeyAssetName" />
+      <Variable x:TypeArguments="x:String" Default="00_SH_SupabaseUrl" Name="UrlAssetName" />
+      <Variable x:TypeArguments="x:String" Default="00_SH_SupabaseApiKey" Name="ApiKeyAssetName" />
       <Variable x:TypeArguments="x:String" Default="lyrebird" Name="Schema" />
       <Variable x:TypeArguments="x:Object" Name="SupabaseUrlValue" />
       <Variable x:TypeArguments="x:String" Name="SupabaseUrl" />
@@ -59,7 +59,7 @@
         <x:Boolean x:Key="IsExpanded">True</x:Boolean>
       </scg:Dictionary>
     </sap:WorkflowViewStateService.ViewState>
-    <ui:GetRobotAsset TimeoutMS="{x:Null}" AssetName="[UrlAssetName]" CacheStrategy="None" DisplayName="Get Asset 10_DP_SupabaseUrl" FolderPath="[AssetFolder]" sap2010:WorkflowViewState.IdRef="GetRobotAsset_1">
+    <ui:GetRobotAsset TimeoutMS="{x:Null}" AssetName="[UrlAssetName]" CacheStrategy="None" DisplayName="Get Asset 00_SH_SupabaseUrl" FolderPath="[AssetFolder]" sap2010:WorkflowViewState.IdRef="GetRobotAsset_1">
       <ui:GetRobotAsset.Value>
         <OutArgument x:TypeArguments="x:Object">[SupabaseUrlValue]</OutArgument>
       </ui:GetRobotAsset.Value>

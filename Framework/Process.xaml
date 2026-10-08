@@ -109,7 +109,7 @@
                           <InArgument x:TypeArguments="ui:QueueItem" x:Key="in_TransactionItem">[in_TransactionItem]</InArgument>
                           <InArgument x:TypeArguments="x:String" x:Key="in_WishlistQueueName">[in_Config("WishlistQueueName").ToString]</InArgument>
                           <InArgument x:TypeArguments="x:String" x:Key="in_QueueFolder">[in_Config("OrchestratorQueueFolder").ToString]</InArgument>
-                          <InArgument x:TypeArguments="x:String" x:Key="in_FailureMessage">[exception.Message]</InArgument>
+                          <InArgument x:TypeArguments="x:String" x:Key="in_FailureMessage">[System.Text.RegularExpressions.Regex.Replace(If(exception.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)]</InArgument>
                           <OutArgument x:TypeArguments="x:String" x:Key="out_Action">[ReconcileAction]</OutArgument>
                           <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[ReconcileMessage]</OutArgument>
                         </ui:InvokeWorkflowFile.Arguments>
@@ -121,14 +121,14 @@
                           <ActivityAction.Argument>
                             <DelegateInArgument x:TypeArguments="s:Exception" Name="reconcileException" />
                           </ActivityAction.Argument>
-                          <ui:LogMessage DisplayName="Log reconciliation failed" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Error" Message="[$&quot;Process {in_TransactionItem.Reference}: last attempt failed and the reconciliation failed too ({reconcileException.GetType().Name}: {reconcileException.Message}). Row and reservation left unchanged; check the row and the output queue.&quot;]" />
+                          <ui:LogMessage DisplayName="Log reconciliation failed" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Error" Message="[$&quot;Process {in_TransactionItem.Reference}: last attempt failed and the reconciliation failed too ({reconcileException.GetType().Name}: {System.Text.RegularExpressions.Regex.Replace(If(reconcileException.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)}). Row and reservation left unchanged; check the row and the output queue.&quot;]" />
                         </ActivityAction>
                       </Catch>
                     </TryCatch.Catches>
                   </TryCatch>
                 </If.Then>
               </If>
-              <ui:LogMessage DisplayName="Log technical failure" sap2010:WorkflowViewState.IdRef="LogMessage_5" Level="Error" Message="[$&quot;Process {in_TransactionItem.Reference}: technical failure -&gt; Failed (Application){If(IsLastAttempt, &quot;, no retries left&quot;, &quot;, Orchestrator will retry&quot;)}: {exception.GetType().Name}: {exception.Message}&quot;]" />
+              <ui:LogMessage DisplayName="Log technical failure" sap2010:WorkflowViewState.IdRef="LogMessage_5" Level="Error" Message="[$&quot;Process {in_TransactionItem.Reference}: technical failure -&gt; Failed (Application){If(IsLastAttempt, &quot;, no retries left&quot;, &quot;, Orchestrator will retry&quot;)}: {exception.GetType().Name}: {System.Text.RegularExpressions.Regex.Replace(If(exception.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)}&quot;]" />
               <Rethrow DisplayName="Rethrow system exception" sap2010:WorkflowViewState.IdRef="Rethrow_2" />
             </Sequence>
           </ActivityAction>

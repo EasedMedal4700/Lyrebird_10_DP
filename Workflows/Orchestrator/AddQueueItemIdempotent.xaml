@@ -78,12 +78,12 @@
                 <If.Then>
                   <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_4">
                     <Assign x:TypeArguments="x:String" DisplayName="Assign out_Result already_exists" sap2010:WorkflowViewState.IdRef="Assign_3" To="[out_Result]" Value="already_exists" />
-                    <ui:LogMessage DisplayName="Log already exists" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;Queue '{in_QueueName}': {in_Reference} already exists (HTTP {CInt(httpException.StatusCode)} {httpException.Message}).&quot;]" />
+                    <ui:LogMessage DisplayName="Log already exists" sap2010:WorkflowViewState.IdRef="LogMessage_2" Level="Info" Message="[$&quot;Queue '{in_QueueName}': {in_Reference} already exists (HTTP {CInt(httpException.StatusCode)} {System.Text.RegularExpressions.Regex.Replace(If(httpException.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)}).&quot;]" />
                   </Sequence>
                 </If.Then>
                 <If.Else>
                   <Sequence DisplayName="Else" sap2010:WorkflowViewState.IdRef="Sequence_5">
-                    <ui:LogMessage DisplayName="Log Orchestrator error" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Error" Message="[$&quot;Queue '{in_QueueName}': adding {in_Reference} FAILED: HTTP {CInt(httpException.StatusCode)} {httpException.Message}&quot;]" />
+                    <ui:LogMessage DisplayName="Log Orchestrator error" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Error" Message="[$&quot;Queue '{in_QueueName}': adding {in_Reference} FAILED: HTTP {CInt(httpException.StatusCode)} {System.Text.RegularExpressions.Regex.Replace(If(httpException.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)}&quot;]" />
                     <Rethrow DisplayName="Rethrow Orchestrator error" sap2010:WorkflowViewState.IdRef="Rethrow_1" />
                   </Sequence>
                 </If.Else>
@@ -97,7 +97,7 @@
               <DelegateInArgument x:TypeArguments="s:Exception" Name="exception" />
             </ActivityAction.Argument>
             <Sequence DisplayName="Catch Exception" sap2010:WorkflowViewState.IdRef="Sequence_6">
-              <ui:LogMessage DisplayName="Log add failed" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Error" Message="[$&quot;Queue '{in_QueueName}': adding {in_Reference} FAILED: {exception.GetType().Name}: {exception.Message}&quot;]" />
+              <ui:LogMessage DisplayName="Log add failed" sap2010:WorkflowViewState.IdRef="LogMessage_4" Level="Error" Message="[$&quot;Queue '{in_QueueName}': adding {in_Reference} FAILED: {exception.GetType().Name}: {System.Text.RegularExpressions.Regex.Replace(If(exception.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)}&quot;]" />
               <Rethrow DisplayName="Rethrow add failed" sap2010:WorkflowViewState.IdRef="Rethrow_2" />
             </Sequence>
           </ActivityAction>

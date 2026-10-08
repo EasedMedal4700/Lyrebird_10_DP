@@ -329,7 +329,7 @@ After a test run, remove what it created (§ 12 shows how): delete the test item
 **Actual risk.**
 - It is the `service_role` key: it bypasses RLS on the whole Supabase. Anyone holding it controls the database.
 - The plain string can leak through Verbose/Trace robot logging (activity arguments), `SaveRawRequestResponse = True` (does not redact `apikey`), the debugger, and process memory / crash dumps.
-- Bigger than the analyzer finding: `10_DP_SupabaseUrl` is `http://tower:8000`, so the key travels **unencrypted** over the LAN.
+- Bigger than the analyzer finding: the Supabase URL (`00_SH_SupabaseUrl` since 2026-10-08, before that `10_DP_SupabaseUrl`) is `http://tower:8000`, so the key travels **unencrypted** over the LAN.
 
 **Decision (2026-10-06, project owner): accept the risk explicitly.**
 
@@ -540,6 +540,7 @@ Initialization ──(first run)──> run settings: Config + BuildRunSettings 
    - production mode: the output queue must **not** end with `_IT`, the startup load never takes `LYREBIRD_IT` rows, and test failure injection is refused;
    - input and output queue must differ; an extra load filter may only use `id`, `artist`, `album`, `preferred_format`, `submission`.
 3. **Queue settings** (`Workflows/Orchestrator/GetQueueSettings.xaml`, Orchestrator HTTP Request `GET /odata/QueueDefinitions`): both queues must exist and enforce unique references. The input queue's real auto-retry flag and max retries decide which attempt is the last one.
+   **Startup dependency checks (since 2026-10-08, § 14.2):** `GetUserAgent` (the MusicBrainz User-Agent asset must exist and be non-empty) and one Supabase read (`wishlist?select=id&limit=1`), also when `in_LoadWishlist = False`. A failure faults the job before anything is loaded or consumed.
 4. **Load New Wishlist Items** (own state): `LoadNewWishlistItems` with the query from step 2, **once per job** (`WishlistLoadAttempted`). It is outside the initialization TryCatch and is skipped when Initialization runs again after a system exception. A load failure ends the job; rerunning is safe (References are unique).
 
 ### 13.2 Transactions
@@ -697,3 +698,39 @@ Steps (both cases; first fix the cause, e.g. Supabase is reachable again, and ma
       where id = <id> and status = 'new' and submission = <n> and queue_reference = '<Reference>';
      ```
    Every statement is guarded by status, submission and Reference, so it changes nothing if the row moved on meanwhile (check `UPDATE 1`).
+
+---
+
+## 14. Changes of 2026-10-08 (shared assets and robustness review)
+
+### 14.1 Shared Supabase assets
+
+- `Workflows/Supabase/GetConnection.xaml` reads **`00_SH_SupabaseUrl`** (Text) and **`00_SH_SupabaseApiKey`** (Secret), both in folder `Lyrebird`. They are the same values as before: the Secret was copied robot-side with Get Secret → Set Secret, without exposing it. GetRows/UpdateRows get the key asset name from GetConnection; no other workflow names a Supabase asset.
+- `10_DP_SupabaseUrl` / `10_DP_SupabaseApiKey` are **deprecated but kept**: the **published package 26.10.0 still reads them** until 10_DP is republished, and they are the rollback. Do not delete them.
+- No data-root asset is used by 10_DP (`10_DP_DataFolder` and `10_DP_SlsknetLogin` are read by no workflow), so nothing else was migrated.
+- Verified on 2026-10-08 from the source: a loader dry run read Supabase with the `00_SH_` assets; offline tests 10/10; `Tests/MainIntegration/main-it.js` 21/22. Every scenario (S0–S5, error handling) passes; the one failing check, "MusicBrainz spacing kept across transactions", is timing-dependent (Open_Items I5). Cleanup was done after each run.
+- Convention and status for all processes: `../Lyrebird_20_PF_Download/Documentation/Shared_Assets_Migration.md`.
+
+### 14.2 Robustness changes
+
+| Change | Before | Now |
+|---|---|---|
+| Get Transaction Data throws (Orchestrator unreachable, 401/403) | logged, job ended **Successful** | `SystemException` set: the job ends **Faulted** |
+| Set Transaction Status throws (after Success / Business / System) | logged Fatal, loop continued, item left In Progress | `FatalException` set: no new item is taken, the job ends **Faulted**. The item may stay In Progress → runbook § 13.7 A |
+| Missing or empty `10_DP_MusicBrainzUserAgent` | discovered inside every transaction, after the load had already reserved and enqueued | checked at startup, before the load |
+| Supabase unreachable / wrong key with `in_LoadWishlist = False` | discovered in the first transaction | checked at startup (one read) |
+| `PersonalEmail` asset **missing** | threw (the docs said "warn") | warns and sends the User-Agent without contact |
+| Recovery from an existing `Lyrebird_Wishlist` item whose status is **Deleted** | finished the row as `queued` (nothing left for 20_PF) | Business rejection, nothing written; resubmit |
+| `LoadNewWishlistItems.xaml` run on its own | `in_DryRun = False`, query without the test-row exclusion | **`in_DryRun = True`** by default; the default query excludes `LYREBIRD_IT` rows. Main and the tests pass `in_DryRun` explicitly |
+| Exception text in logs and in `in_FailureMessage` (stored in `wishlist.message`) | raw | secret mask (`authorization|apikey|api_key|bearer|password|secret` values → `***`), as already used for the Orchestrator reason |
+| Invalid-row log of the loader | the whole row JSON | row id only |
+| MusicBrainz rate-limit wait log | `ValidateAlbum.xaml`: Trace (not visible at the production log level); `GetReleaseGroupReleases.xaml`: none (it waited silently) | both Info: the 1 request/second spacing is visible in the job log |
+| `main-it.js` CLI parsing | plain `JSON.parse`: when the CLI printed the run log before the JSON envelope, logs/errors were lost and log-based checks failed | parses the envelope after the text log (same as pf20-it.js) |
+
+Open items found in the same review (index with IDs in `Documentation/Open_Items.md`; I1 and I3 also carry Todo Tree markers in the workflows):
+
+- A lost response on the claim PATCH is classified as a human edit.
+- Test rows are recognised by the editable `message` column.
+- A business rejection after the claim keeps the reservation (§ 11.5).
+
+The full failure/outcome view is in `Documentation/Outcome_Matrix.md`.

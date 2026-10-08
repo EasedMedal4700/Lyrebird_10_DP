@@ -111,7 +111,7 @@
                   <av:PointCollection x:Key="ConnectorLocation">160,435 160,485</av:PointCollection>
                 </scg:Dictionary>
               </sap:WorkflowViewStateService.ViewState>
-              <ui:LogMessage DisplayName="Log message (Max retries reached)" sap:VirtualizedContainerService.HintSize="110,70" sap2010:WorkflowViewState.IdRef="LogMessage_17" Level="Error" Message="[in_Config(&quot;LogMessage_ApplicationException&quot;).ToString+&quot; Max number of retries reached. &quot;+in_SystemException.Message+&quot; at Source: &quot;+in_SystemException.Source]">
+              <ui:LogMessage DisplayName="Log message (Max retries reached)" sap:VirtualizedContainerService.HintSize="110,70" sap2010:WorkflowViewState.IdRef="LogMessage_17" Level="Error" Message="[in_Config(&quot;LogMessage_ApplicationException&quot;).ToString+&quot; Max number of retries reached. &quot;+System.Text.RegularExpressions.Regex.Replace(If(in_SystemException.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)+&quot; at Source: &quot;+in_SystemException.Source]">
                 <sap:WorkflowViewStateService.ViewState>
                   <scg:Dictionary x:TypeArguments="x:String, x:Object">
                     <x:Boolean x:Key="IsExpanded">True</x:Boolean>
@@ -168,7 +168,7 @@
                   <av:PointCollection x:Key="ConnectorLocation">400,435 400,464.99999999999994 400.3333333333333,464.99999999999994 400.3333333333333,500</av:PointCollection>
                 </scg:Dictionary>
               </sap:WorkflowViewStateService.ViewState>
-              <ui:LogMessage DisplayName="Log message (Retry)" sap:VirtualizedContainerService.HintSize="110,70" sap2010:WorkflowViewState.IdRef="LogMessage_18" Level="Warn" Message="[in_Config(&quot;LogMessage_ApplicationException&quot;).ToString+&quot; Retry: &quot;+io_RetryNumber.ToString+&quot;. &quot;+in_SystemException.Message+&quot; at Source: &quot;+in_SystemException.Source]" />
+              <ui:LogMessage DisplayName="Log message (Retry)" sap:VirtualizedContainerService.HintSize="110,70" sap2010:WorkflowViewState.IdRef="LogMessage_18" Level="Warn" Message="[in_Config(&quot;LogMessage_ApplicationException&quot;).ToString+&quot; Retry: &quot;+io_RetryNumber.ToString+&quot;. &quot;+System.Text.RegularExpressions.Regex.Replace(If(in_SystemException.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)+&quot; at Source: &quot;+in_SystemException.Source]" />
               <FlowStep.Next>
                 <FlowDecision x:Name="__ReferenceID7" Condition="[in_QueueRetry]" DisplayName="Use Orchestrator's retry?" sap:VirtualizedContainerService.HintSize="60.666666666666664,60.666666666666664" sap2010:WorkflowViewState.IdRef="FlowDecision_10">
                   <sap:WorkflowViewStateService.ViewState>
@@ -234,7 +234,7 @@
               <av:PointCollection x:Key="ConnectorLocation">590,315 590,365</av:PointCollection>
             </scg:Dictionary>
           </sap:WorkflowViewStateService.ViewState>
-          <ui:LogMessage DisplayName="Log message (No retry)" sap:VirtualizedContainerService.HintSize="110,70" sap2010:WorkflowViewState.IdRef="LogMessage_19" Level="Error" Message="[in_Config(&quot;LogMessage_ApplicationException&quot;).ToString+in_SystemException.Message+&quot; at Source: &quot;+in_SystemException.Source]" />
+          <ui:LogMessage DisplayName="Log message (No retry)" sap:VirtualizedContainerService.HintSize="110,70" sap2010:WorkflowViewState.IdRef="LogMessage_19" Level="Error" Message="[in_Config(&quot;LogMessage_ApplicationException&quot;).ToString+System.Text.RegularExpressions.Regex.Replace(If(in_SystemException.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)+&quot; at Source: &quot;+in_SystemException.Source]" />
           <FlowStep.Next>
             <FlowStep x:Name="__ReferenceID6" sap2010:WorkflowViewState.IdRef="FlowStep_33">
               <sap:WorkflowViewStateService.ViewState>

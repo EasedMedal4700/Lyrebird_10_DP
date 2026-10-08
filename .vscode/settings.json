@@ -1,0 +1,8 @@
+{
+  // Todo Tree (Gruntfuggly.todo-tree), project scope only. Tags stay the extension defaults (TODO, FIXME, ...);
+  // the category goes after the tag: TODO [USER]: / TODO [IMPLEMENTATION]: / FIXME [BLOCKER]:  (see Documentation/Open_Items.md).
+  // The default regex is extended so markers are also found where UiPath keeps them: at the start of an
+  // annotation (AnnotationText="TODO ...) and after a line break inside one (&#xA;TODO ...). Studio removes XML comments on save.
+  "todo-tree.regex.regex": "(//|#|<!--|;|/\*|^|^[ \t]*(-|\d+.)|AnnotationText=\"|&#xA;)\s*($TAGS)",
+  "todo-tree.filtering.excludeGlobs": ["**/.local/**", "**/.settings/**", "**/.objects/**", "**/node_modules/**"]
+}

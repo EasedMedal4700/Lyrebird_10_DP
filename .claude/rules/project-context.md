@@ -125,3 +125,4 @@ Run from the project folder (`uip` may not be on PATH; it is installed with npm)
 - **Production run (writes!)**: `uip rpa run --file-path "Main.xaml" --project-dir . --output json` (DataContract 13.4)
 - **Loader dry run (reads Supabase, adds nothing)**: `uip rpa run --file-path "Workflows/Wishlist/LoadNewWishlistItems.xaml" --project-dir . --input-arguments in_DryRun:=true --output json`
 - **Read first**: `Documentation/Lyrebird_DataContract.md`, `Main.xaml`, `Framework/Process.xaml`, `Workflows/Wishlist/ProcessValidateQueueItem.xaml`
+- **Open work / failure classes**: `Documentation/Open_Items.md` (Todo Tree markers in annotations: `FIXME [BLOCKER]:` / `TODO [USER]:` / `TODO [IMPLEMENTATION]:` with what / Why / Done when; never XML comments) and `Documentation/Outcome_Matrix.md`

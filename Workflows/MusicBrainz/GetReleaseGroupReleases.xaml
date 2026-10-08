@@ -93,7 +93,7 @@
           <If Condition="[Wait &gt; TimeSpan.Zero]" DisplayName="If last request was less than 1.1 s ago" sap2010:WorkflowViewState.IdRef="If_2">
             <If.Then>
               <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_4">
-                <Delay DisplayName="Delay for MusicBrainz rate limit" Duration="[Wait]" sap2010:WorkflowViewState.IdRef="Delay_1" />
+                <ui:LogMessage DisplayName="Log rate limit wait" sap2010:WorkflowViewState.IdRef="LogMessage_3" Level="Info" Message="[$&quot;MusicBrainz: waiting {CInt(Wait.TotalMilliseconds)} ms for the 1 request/second limit (release lookup).&quot;]" /><Delay DisplayName="Delay for MusicBrainz rate limit" Duration="[Wait]" sap2010:WorkflowViewState.IdRef="Delay_1" />
               </Sequence>
             </If.Then>
           </If>
@@ -112,7 +112,7 @@
                   </ActivityAction.Argument>
                   <Sequence DisplayName="Catch" sap2010:WorkflowViewState.IdRef="Sequence_6">
                     <Assign x:TypeArguments="s:DateTime" DisplayName="Assign io_LastRequestUtc" sap2010:WorkflowViewState.IdRef="Assign_5" To="[io_LastRequestUtc]" Value="[DateTime.UtcNow]" />
-                    <ui:LogMessage DisplayName="Log request failed" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Error" Message="[$&quot;MusicBrainz release lookup failed ({exception.GetType().Name}): {exception.Message}&quot;]" />
+                    <ui:LogMessage DisplayName="Log request failed" sap2010:WorkflowViewState.IdRef="LogMessage_1" Level="Error" Message="[$&quot;MusicBrainz release lookup failed ({exception.GetType().Name}): {System.Text.RegularExpressions.Regex.Replace(If(exception.Message, String.Empty), &quot;(?i)(authorization|apikey|api_key|bearer|password|secret)([\s&quot;&quot;':=]+)[^\s&quot;&quot;',;}]+&quot;, &quot;$1$2***&quot;)}&quot;]" />
                     <Rethrow DisplayName="Rethrow request failed" sap2010:WorkflowViewState.IdRef="Rethrow_1" />
                   </Sequence>
                 </ActivityAction>

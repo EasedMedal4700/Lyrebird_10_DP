@@ -365,7 +365,7 @@
                   <Variable x:TypeArguments="njl:JArray" Name="ClaimRows" />
                   <Variable x:TypeArguments="njl:JArray" Name="HolderRows" />
                 </Sequence.Variables>
-                <TryCatch DisplayName="Try claim" sap2010:WorkflowViewState.IdRef="TryCatch_1">
+                <TryCatch sap2010:Annotation.AnnotationText="TODO [IMPLEMENTATION]: treat a 0-row claim as success when a re-read shows the claim already applied (row still 'new', same submission, reserved_release_group = this group). Why: if the PATCH was applied but its response was lost (gateway 502/504, timeout) the HTTP retry matches 0 rows and ClassifyGuardMiss reports a human edit (Failed Business, reservation held). Done when: a fault-injection test applies the claim, then repeats it and the item continues instead of failing." DisplayName="Try claim" sap2010:WorkflowViewState.IdRef="TryCatch_1">
                   <TryCatch.Try>
                     <Sequence DisplayName="Try" sap2010:WorkflowViewState.IdRef="Sequence_21">
                       <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" DisplayName="Invoke UpdateRows claim reservation" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_11" UnSafe="False" WorkflowFileName="Workflows\Supabase\UpdateRows.xaml">
@@ -596,8 +596,8 @@
                   <If.Then>
                     <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_34">
                       <Sequence.Variables>
-                        <Variable x:TypeArguments="x:String" Name="MissResult" />
-                        <Variable x:TypeArguments="x:String" Name="MissMessage" />
+                        <Variable x:TypeArguments="x:String" Name="FinalMissResult" />
+                        <Variable x:TypeArguments="x:String" Name="FinalMissMessage" />
                       </Sequence.Variables>
                       <ui:InvokeWorkflowFile ArgumentsVariable="{x:Null}" sap2010:Annotation.AnnotationText="Throws BusinessRuleException when the row was edited/deleted/changed elsewhere." DisplayName="Invoke ClassifyGuardMiss (final update)" sap2010:WorkflowViewState.IdRef="InvokeWorkflowFile_17" UnSafe="False" WorkflowFileName="Workflows\Wishlist\ClassifyGuardMiss.xaml">
                         <ui:InvokeWorkflowFile.Arguments>
@@ -605,15 +605,15 @@
                           <InArgument x:TypeArguments="x:Int32" x:Key="in_Submission">[Submission]</InArgument>
                           <InArgument x:TypeArguments="x:String" x:Key="in_IntendedStatus">[DbStatus]</InArgument>
                           <InArgument x:TypeArguments="x:String" x:Key="in_Context">[$"final update ({Outcome})"]</InArgument>
-                          <OutArgument x:TypeArguments="x:String" x:Key="out_Result">[MissResult]</OutArgument>
-                          <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[MissMessage]</OutArgument>
+                          <OutArgument x:TypeArguments="x:String" x:Key="out_Result">[FinalMissResult]</OutArgument>
+                          <OutArgument x:TypeArguments="x:String" x:Key="out_Message">[FinalMissMessage]</OutArgument>
                         </ui:InvokeWorkflowFile.Arguments>
                       </ui:InvokeWorkflowFile>
-                      <If Condition="[MissResult = &quot;superseded&quot;]" DisplayName="If superseded" sap2010:WorkflowViewState.IdRef="If_20">
+                      <If Condition="[FinalMissResult = &quot;superseded&quot;]" DisplayName="If superseded" sap2010:WorkflowViewState.IdRef="If_20">
                         <If.Then>
                           <Sequence DisplayName="Then" sap2010:WorkflowViewState.IdRef="Sequence_35">
                             <Assign x:TypeArguments="x:String" DisplayName="Assign Outcome superseded" sap2010:WorkflowViewState.IdRef="Assign_32" To="[Outcome]" Value="superseded" />
-                            <Assign x:TypeArguments="x:String" DisplayName="Assign ResultMessage" sap2010:WorkflowViewState.IdRef="Assign_33" To="[ResultMessage]" Value="[MissMessage &amp; If(Enqueue, $&quot; {in_WishlistQueueName} item {ResultReference} exists for the old submission; process 20 must ignore it (submission check).&quot;, String.Empty)]" />
+                            <Assign x:TypeArguments="x:String" DisplayName="Assign ResultMessage" sap2010:WorkflowViewState.IdRef="Assign_33" To="[ResultMessage]" Value="[FinalMissMessage &amp; If(Enqueue, $&quot; {in_WishlistQueueName} item {ResultReference} exists for the old submission; process 20 must ignore it (submission check).&quot;, String.Empty)]" />
                           </Sequence>
                         </If.Then>
                       </If>

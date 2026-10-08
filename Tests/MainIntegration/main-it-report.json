@@ -1,22 +1,22 @@
 {
-  "when": "2026-10-07T15:03:14.355Z",
+  "when": "2026-10-08T13:05:02.132Z",
   "rows": {
-    "A": 57,
-    "B": 58,
-    "C": 59,
-    "E": 60,
-    "F": 61,
-    "G": 62,
-    "H": 63
+    "A": 146,
+    "B": 147,
+    "C": 148,
+    "E": 149,
+    "F": 150,
+    "G": 151,
+    "H": 152
   },
-  "failed": 0,
+  "failed": 1,
   "results": [
     {
       "scenario": "S0 unsafe settings",
       "name": "test input with the regular output queue faults the job",
       "ok": true,
       "evidence": [
-        "System.ArgumentException: Unsafe Main.xaml run settings, nothing was loaded or processed: test input queue 'Lyrebird_Validate_Main_IT' requires a test output queue ending with _IT (got 'Lyrebird_Wishlist')."
+        "{\"output\":\"{}\",\"hasErrors\":true,\"errorMessage\":\"Source: Throw unsafe run settings\\r\\nMessage: Unsafe Main.xaml run settings, nothing was loaded or processed: test input queue 'Lyrebird_Validate_Main_IT' requires a test output queue ending with _IT (got 'Lyrebird_Wishlist').\\r\\nException Type: System.ArgumentException\\r\\nin Workflows\\\\Main\\\\BuildRunSettings.xaml\\r\\n    at Throw \\\"Throw unsafe run settings\\\"\\r\\n    at If \\\"If the run settings are unsafe\\\"\\r\\n    at Sequence \\\"Build Run Settings\\\"\\r\\n    at BuildRunSettings \\\"BuildRunSettings\\\"\\r\\n\\r\\n   at System.Activities.Statements.Throw.Execute(CodeActivityContext context)\\r\\n   at System.Activities.CodeActivity.InternalExecute(ActivityInstance instance, ActivityExecutor executor, BookmarkManager bookmarkManager)\\r\\n   at System.Activities.Runtime.ActivityExecutor.ExecuteActivityWorkItem.ExecuteBody(ActivityExecutor executor, BookmarkManager bookmarkManager, Location resultLocation)\\r\\n--- End of stack trace from previous location ---\\r\\n   at UiPath.Executor.Core.Runners.BaseRunner.EndExecute(IAsyncResult result) in D:\\\\a\\\\1\\\\s\\\\Robot\\\\UiPath.Executor.Core\\\\Runners\\\\BaseRunner.cs:line 56\\r\\n   at UiPath.Executor.Core.Runners.WorkflowInProcessRunner.EndExecute(IAsyncResult result) in D:\\\\a\\\\1\\\\s\\\\Robot\\\\UiPath.Executor.Core\\\\Runners\\\\WorkflowInProcessRunner.cs:line 127\\r\\n   at UiPath.Core.Activities.ExecutorInvokeActivity.EndExecute(NativeActivityContext context, IAsyncResult result)\\r\\n   at UiPath.Core.Activities.AsyncNativeActivity.BookmarkResumptionCallback(NativeActivityContext context, Bookmark bookmark, Object value)\\r\\n   at System.Activities.Runtime.BookmarkWorkItem.Execute(ActivityExecutor executor, BookmarkManager bookmarkManager)\",\"profiling\":null,\"debugState\":null,\"debugDetails\":null}"
       ]
     },
     {
@@ -31,7 +31,7 @@
       "scenario": "S1 setup",
       "name": "row E loaded alone",
       "ok": true,
-      "evidence": "Lyrebird Integration Test - Business Rejection Main 20261007 | WL-60-S1"
+      "evidence": "Lyrebird Integration Test - Business Rejection Main 20261007 | WL-149-S1"
     },
     {
       "scenario": "S1 success/business",
@@ -56,7 +56,7 @@
           {
             "status": "Successful",
             "retry": 0,
-            "ref": "Massive Attack - Mezzanine | WL-57-S1",
+            "ref": "Massive Attack - Mezzanine | WL-146-S1",
             "output": {
               "Outcome": "queued",
               "Message": "Validated as 'Massive Attack' - 'Mezzanine' (score 100); release 5ddf4fbc-c415-4974-9d2b-abb7b96b45f7, 11 tracks. Release chosen by a person (chosen_release_id): 5ddf4fbc-c415-4974-9d2b-abb7b96b45f7 (1998, US, 11 tracks)."
@@ -77,7 +77,7 @@
         {
           "status": "Successful",
           "retry": 0,
-          "ref": "Lyrebird Integration Test - No Such Album Main 20261007 | WL-58-S1",
+          "ref": "Lyrebird Integration Test - No Such Album Main 20261007 | WL-147-S1",
           "output": {
             "Outcome": "not_found",
             "Message": "No release group found on MusicBrainz."
@@ -96,7 +96,7 @@
         {
           "status": "Successful",
           "retry": 0,
-          "ref": "Portisead - Dumy | WL-59-S1",
+          "ref": "Portisead - Dumy | WL-148-S1",
           "output": {
             "Outcome": "check_spelling",
             "Message": "Best match has a different artist or album name. Please check the spelling. Closest MusicBrainz match: 'Portishead' - 'Dummy' (score 100)."
@@ -116,10 +116,10 @@
           {
             "status": "Failed",
             "retry": 0,
-            "ref": "Lyrebird Integration Test - Business Rejection Main 20261007 | WL-60-S1",
+            "ref": "Lyrebird Integration Test - Business Rejection Main 20261007 | WL-149-S1",
             "output": null,
             "exception": "BusinessException",
-            "reason": "Lyrebird Integration Test - Business Rejection Main 20261007 | WL-60-S1: the wishlist row holds queue_reference 'Changed By Test - Elsewhere | WL-60-S1', not this item's Reference. Nothing was written. Load the row again (loader) instead of processing this item.",
+            "reason": "Lyrebird Integration Test - Business Rejection Main 20261007 | WL-149-S1: the wishlist row holds queue_reference 'Changed By Test - Elsewhere | WL-149-S1', not this item's Reference. Nothing was written. Load the row again (loader) instead of processing this item.",
             "details": null
           }
         ],
@@ -129,10 +129,11 @@
     {
       "scenario": "S1 success/business",
       "name": "MusicBrainz spacing kept across transactions",
-      "ok": true,
-      "evidence": [
-        "MusicBrainz: waiting 133 ms for the 1 request/second limit."
-      ]
+      "ok": false,
+      "evidence": {
+        "waits": [],
+        "requests": 3
+      }
     },
     {
       "scenario": "S2 empty queue",
@@ -151,16 +152,16 @@
         {
           "status": "Retried",
           "retry": 0,
-          "ref": "Air - Moon Safari | WL-61-S1",
+          "ref": "Air - Moon Safari | WL-150-S1",
           "output": null,
           "exception": "ApplicationException",
-          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Air - Moon Safari | WL-61-S1.",
+          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Air - Moon Safari | WL-150-S1.",
           "details": "System.Exception"
         },
         {
           "status": "New",
           "retry": 1,
-          "ref": "Air - Moon Safari | WL-61-S1",
+          "ref": "Air - Moon Safari | WL-150-S1",
           "output": null,
           "exception": null,
           "reason": null,
@@ -186,16 +187,16 @@
           {
             "status": "Retried",
             "retry": 0,
-            "ref": "Air - Moon Safari | WL-61-S1",
+            "ref": "Air - Moon Safari | WL-150-S1",
             "output": null,
             "exception": "ApplicationException",
-            "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Air - Moon Safari | WL-61-S1.",
+            "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Air - Moon Safari | WL-150-S1.",
             "details": "System.Exception"
           },
           {
             "status": "Successful",
             "retry": 1,
-            "ref": "Air - Moon Safari | WL-61-S1",
+            "ref": "Air - Moon Safari | WL-150-S1",
             "output": {
               "Outcome": "queued",
               "Message": "Validated as 'Air' - 'Moon Safari' (score n/a); release 4c55906c-349b-362d-922e-956762912b42, 10 tracks. Taken from existing Lyrebird_Wishlist_Main_IT item (New). Recovered from the existing Lyrebird_Wishlist item."
@@ -219,28 +220,28 @@
         {
           "status": "Retried",
           "retry": 0,
-          "ref": "Björk - Homogenic | WL-62-S1",
+          "ref": "Björk - Homogenic | WL-151-S1",
           "output": null,
           "exception": "ApplicationException",
-          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Björk - Homogenic | WL-62-S1.",
+          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Björk - Homogenic | WL-151-S1.",
           "details": "System.Exception"
         },
         {
           "status": "Retried",
           "retry": 1,
-          "ref": "Björk - Homogenic | WL-62-S1",
+          "ref": "Björk - Homogenic | WL-151-S1",
           "output": null,
           "exception": "ApplicationException",
-          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Björk - Homogenic | WL-62-S1.",
+          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Björk - Homogenic | WL-151-S1.",
           "details": "System.Exception"
         },
         {
           "status": "Failed",
           "retry": 2,
-          "ref": "Björk - Homogenic | WL-62-S1",
+          "ref": "Björk - Homogenic | WL-151-S1",
           "output": null,
           "exception": "ApplicationException",
-          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Björk - Homogenic | WL-62-S1.",
+          "reason": "Exception: INJECTED FAILURE (test only) after_enqueue for Björk - Homogenic | WL-151-S1.",
           "details": "System.Exception"
         }
       ]
@@ -273,28 +274,28 @@
         {
           "status": "Retried",
           "retry": 0,
-          "ref": "Portishead - Dummy | WL-63-S1",
+          "ref": "Portishead - Dummy | WL-152-S1",
           "output": null,
           "exception": "ApplicationException",
-          "reason": "Exception: INJECTED FAILURE (test only) after_reservation for Portishead - Dummy | WL-63-S1.",
+          "reason": "Exception: INJECTED FAILURE (test only) after_reservation for Portishead - Dummy | WL-152-S1.",
           "details": "System.Exception"
         },
         {
           "status": "Retried",
           "retry": 1,
-          "ref": "Portishead - Dummy | WL-63-S1",
+          "ref": "Portishead - Dummy | WL-152-S1",
           "output": null,
           "exception": "ApplicationException",
-          "reason": "Exception: MusicBrainz validation for wishlist 63 failed technically (status 'api_error'), retry later: MusicBrainz returned HTTP 503: {\"error\": \"The MusicBrainz web server is currently busy. Please try again later.\"}\n",
+          "reason": "Exception: INJECTED FAILURE (test only) after_reservation for Portishead - Dummy | WL-152-S1.",
           "details": "System.Exception"
         },
         {
           "status": "Failed",
           "retry": 2,
-          "ref": "Portishead - Dummy | WL-63-S1",
+          "ref": "Portishead - Dummy | WL-152-S1",
           "output": null,
           "exception": "ApplicationException",
-          "reason": "Exception: INJECTED FAILURE (test only) after_reservation for Portishead - Dummy | WL-63-S1.",
+          "reason": "Exception: INJECTED FAILURE (test only) after_reservation for Portishead - Dummy | WL-152-S1.",
           "details": "System.Exception"
         }
       ]
@@ -314,9 +315,9 @@
       "name": "MusicBrainz last-request time survives re-initialization (retries see the earlier request)",
       "ok": true,
       "evidence": [
-        "Process Portishead - Dummy | WL-63-S1: attempt 1; last MusicBrainz request none in this job.",
-        "Process Portishead - Dummy | WL-63-S1: attempt 2; last MusicBrainz request 15:02:35.868 UTC.",
-        "Process Portishead - Dummy | WL-63-S1: attempt 3 (last attempt); last MusicBrainz request 15:02:37.063 UTC."
+        "Process Portishead - Dummy | WL-152-S1: attempt 1; last MusicBrainz request none in this job.",
+        "Process Portishead - Dummy | WL-152-S1: attempt 2; last MusicBrainz request 13:04:21.886 UTC.",
+        "Process Portishead - Dummy | WL-152-S1: attempt 3 (last attempt); last MusicBrainz request 13:04:24.534 UTC."
       ]
     },
     {
@@ -324,7 +325,7 @@
       "name": "system exceptions are recorded as sanitized text (reason 'Type: message', details = exception type)",
       "ok": true,
       "evidence": {
-        "reason": "Exception: INJECTED FAILURE (test only) after_reservation for Portishead - Dummy | WL-63-S1.",
+        "reason": "Exception: INJECTED FAILURE (test only) after_reservation for Portishead - Dummy | WL-152-S1.",
         "details": "System.Exception"
       }
     },

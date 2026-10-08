@@ -47,16 +47,22 @@ The user will then give you the current DDL so you can create or update the file
 ### Orchestrator assets
 
 Process assets live in the Orchestrator folder **`Lyrebird`** (not `Shared/Lyrebird`) and are named `10_DP_<Name>`.
-Assets used by several processes live in the folder **`Shared`** without a prefix.
+Lyrebird assets used by several processes live in folder **`Lyrebird`** with prefix **`00_SH_`** (since 2026-10-08,
+see `../Lyrebird_20_PF_Download/Documentation/Shared_Assets_Migration.md`). The older folder **`Shared`** (no prefix)
+still holds `PersonalEmail`.
+
+Used by the source (`Workflows/Supabase/GetConnection.xaml`, `Workflows/MusicBrainz/GetUserAgent.xaml`):
 
 | Asset | Type | Purpose |
 |---|---|---|
-| `10_DP_SupabaseUrl` | Text | Supabase base URL |
-| `10_DP_SupabaseApiKey` | Secret | Supabase API key |
-| `10_DP_SlsknetLogin` | Credential | Soulseek login |
-| `10_DP_DataFolder` | Text | Root data folder (`C:\Lyrebird_Data`); build subfolder paths from it, no asset per subfolder |
-| `10_DP_MusicBrainzUserAgent` | Text | App name/version for the MusicBrainz User-Agent (`Lyrebird_10_DP/1.0.0`) |
-| `PersonalEmail` (folder `Shared`) | Text | Contact email; `ValidateAlbum.xaml` sends `<10_DP_MusicBrainzUserAgent> ( <PersonalEmail> )` as User-Agent |
+| `00_SH_SupabaseUrl` | Text | Supabase base URL (shared with 20_PF) |
+| `00_SH_SupabaseApiKey` | Secret | Supabase API key (shared with 20_PF); read with Get Secret right before each request |
+| `10_DP_MusicBrainzUserAgent` | Text | App name/version for the MusicBrainz User-Agent (`Lyrebird_10_DP/1.0.0`); missing/empty stops the job at startup |
+| `PersonalEmail` (folder `Shared`) | Text | Contact email; `ValidateAlbum.xaml` sends `<10_DP_MusicBrainzUserAgent> ( <PersonalEmail> )` as User-Agent; missing/empty only warns |
+
+Deprecated, kept on purpose (do not delete): `10_DP_SupabaseUrl`, `10_DP_SupabaseApiKey` (still read by the **published**
+package 26.10.0 until 10_DP is republished; rollback). Not read by any workflow: `10_DP_DataFolder` (10_DP needs no data
+root), `10_DP_SlsknetLogin` (Soulseek login; no process logs in).
 
 <!-- PROJECT-CONTEXT:START -->
 <!-- discovery-metadata: cs=0 xaml=54 deps=5 -->
@@ -186,4 +192,5 @@ Run from the project folder (`uip` may not be on PATH; it is installed with npm)
 - **Production run (writes!)**: `uip rpa run --file-path "Main.xaml" --project-dir . --output json` (DataContract 13.4)
 - **Loader dry run (reads Supabase, adds nothing)**: `uip rpa run --file-path "Workflows/Wishlist/LoadNewWishlistItems.xaml" --project-dir . --input-arguments in_DryRun:=true --output json`
 - **Read first**: `Documentation/Lyrebird_DataContract.md`, `Main.xaml`, `Framework/Process.xaml`, `Workflows/Wishlist/ProcessValidateQueueItem.xaml`
+- **Open work / failure classes**: `Documentation/Open_Items.md` (Todo Tree markers in annotations: `FIXME [BLOCKER]:` / `TODO [USER]:` / `TODO [IMPLEMENTATION]:` with what / Why / Done when; never XML comments) and `Documentation/Outcome_Matrix.md`
 <!-- PROJECT-CONTEXT:END -->

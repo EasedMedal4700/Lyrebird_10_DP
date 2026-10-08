@@ -33,7 +33,13 @@ function sql(text) {
 }
 function uip(args) {
   const r = spawnSync(process.execPath, [CLI, ...args], { cwd: PROJECT, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-  try { return JSON.parse(r.stdout); } catch { return { Result: "Unparsed", raw: (r.stdout || "") + (r.stderr || "") }; }
+  const out = r.stdout || "";
+  try { return JSON.parse(out); } catch { /* the CLI may print the run log as text first, then the JSON envelope */ }
+  const at = out.search(/^\{\s*$/m);
+  if (at >= 0) {
+    try { const j = JSON.parse(out.slice(at)); j.textLog = out.slice(0, at).split(/\r?\n/).filter(Boolean); return j; } catch { /* fall through */ }
+  }
+  return { Result: "Unparsed", raw: out + (r.stderr || "") };
 }
 function runMain(args) {
   const file = path.join(__dirname, "main-args.tmp.json");
@@ -44,8 +50,10 @@ function runMain(args) {
   const r = uip(["rpa", "run", "--file-path", "Main.xaml", "--project-dir", ".", "--skip-build", "--input-arguments-file", file, "--output", "json"]);
   fs.unlinkSync(file);
   const d = r.Data || {};
-  const logs = (d.logEntries || []).map(e => e.message || "");
+  const logs = (d.logEntries || []).map(e => e.message || "")
+    .concat((r.textLog || []).map(l => l.replace(/^\s*\[[A-Za-z]+\]\s*/, "")));   // text log lines: "[Level] message"
   const errors = (d.errors || []).map(e => (e.errorName || "") + ": " + (e.errorMessage || ""));
+  if (r.Result !== "Success") errors.push(String(r.Message || r.raw || r.Result).slice(0, 2000));   // faulted job or unparsed output
   return { seconds: Math.round((Date.now() - started) / 1000), logs, errors, faulted: errors.length > 0 };
 }
 function queueItems(queue) {
@@ -119,7 +127,7 @@ function run() {
   // S1 setup: load E alone, then break its stored reference -> its item must be rejected (business)
   const pre = uip(["rpa", "run", "--file-path", "Workflows/Wishlist/LoadNewWishlistItems.xaml", "--project-dir", ".", "--skip-build",
     "--input-arguments", `in_QueueName=${VQ}`, "--input-arguments", `in_QueueFolder=${FOLDER}`,
-    "--input-arguments", `in_Query=select=*&id=eq.${E}`, "--output", "json"]);
+    "--input-arguments", `in_Query=select=*&id=eq.${E}`, "--input-arguments", "in_DryRun=False", "--output", "json"]);
   check("S1 setup", "row E loaded alone", pre.Result === "Success" && !!row(E).queue_reference, row(E).queue_reference);
   sql(`update lyrebird.wishlist set queue_reference = 'Changed By Test - Elsewhere | WL-${E}-S1' where id = ${E} and message like 'LYREBIRD_IT%';`);
 
@@ -135,7 +143,9 @@ function run() {
   check("S1 success/business", "C check_spelling -> Successful", out(C).length === 1 && out(C)[0].status === "Successful" && out(C)[0].output.Outcome === "check_spelling" && row(C).status === "check_spelling", out(C));
   check("S1 success/business", "E business rejection -> Failed once, no retry, row untouched",
     out(E).length === 1 && out(E)[0].status === "Failed" && out(E)[0].retry === 0 && row(E).status === "new" && !row(E).mbid, { item: out(E), row: row(E).status });
-  check("S1 success/business", "MusicBrainz spacing kept across transactions", count(m.logs, /MusicBrainz: waiting \d+ ms/) >= 1, m.logs.filter(l => l.includes("MusicBrainz: waiting")).slice(0, 4));
+  check("S1 success/business", "MusicBrainz spacing kept across transactions", count(m.logs, /MusicBrainz: waiting \d+ ms/) >= 1,
+    // timing-dependent: a wait (and this log) only happens when two MusicBrainz requests fall within 1 s
+    { waits: m.logs.filter(l => l.includes("MusicBrainz: waiting")).slice(0, 4), requests: m.logs.filter(l => /^MusicBrainz: HTTP/.test(l)).length });
 
   // S2: empty queue
   m = runMain({ in_LoadFilter: "id=in.(-1)" });

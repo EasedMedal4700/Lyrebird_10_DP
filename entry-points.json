@@ -1,0 +1,50 @@
+{
+  "$schema": "https://cloud.uipath.com/draft/2024-12/entry-point",
+  "entryPoints": [
+    {
+      "filePath": "Main.xaml",
+      "uniqueId": "93dcbd34-15dd-4169-935c-e5353f929466",
+      "type": "process",
+      "input": {
+        "type": "object",
+        "properties": {
+          "in_OrchestratorQueueName": {
+            "type": "string",
+            "description": "Allows the Orchestrator queue name to be passed as an argument, instead of only being defined in the configuration file."
+          },
+          "in_OrchestratorQueueFolder": {
+            "type": "string",
+            "description": "Allows the Orchestrator folder name where the queue is created to be passed as an argument, instead of only being defined in the configuration file."
+          },
+          "in_WishlistQueueName": {
+            "type": "string",
+            "description": "Lyrebird: output queue for validated albums. Empty = Config WishlistQueueName (Lyrebird_Wishlist). With an _IT input queue this must be an _IT queue."
+          },
+          "in_LoadWishlist": {
+            "type": "boolean",
+            "description": "Lyrebird: load new wishlist rows into the input queue once at job start. Default True.",
+            "x-default-expression": "True",
+            "default": true
+          },
+          "in_LoadFilter": {
+            "type": "string",
+            "description": "Lyrebird: optional extra filter for the startup load, e.g. id=in.(40,41). Only id, artist, album, preferred_format, submission conditions."
+          },
+          "in_MaxTransactions": {
+            "type": "integer",
+            "minimum": -2147483648,
+            "maximum": 2147483647,
+            "description": "Lyrebird: stop after this many transactions (0 = no limit). Stops between transactions like an Orchestrator stop request.",
+            "x-default-expression": "0",
+            "default": 0
+          },
+          "in_TestFailAfterStep": {
+            "type": "string",
+            "description": "Lyrebird TEST ONLY: performer failure injection (after_reservation | after_enqueue). Refused unless both queues end with _IT."
+          }
+        },
+        "required": []
+      }
+    }
+  ]
+}
